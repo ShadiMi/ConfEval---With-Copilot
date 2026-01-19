@@ -26,6 +26,7 @@ import {
   Edit,
   Star,
   User,
+  Users,
   Calendar,
   Tag as TagIcon,
   Download,
@@ -543,6 +544,35 @@ export default function ProjectDetailPage() {
                     <Badge key={tag.id} variant="gray">
                       {tag.name}
                     </Badge>
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {/* Assigned Reviewers */}
+          {project.assigned_reviewers && project.assigned_reviewers.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center">
+                  <Users className="w-5 h-5 text-slate-400 mr-2" />
+                  <h2 className="font-semibold text-slate-900">Assigned Reviewers</h2>
+                </div>
+              </CardHeader>
+              <CardBody>
+                <div className="space-y-3">
+                  {project.assigned_reviewers.map((reviewer) => (
+                    <div key={reviewer.id} className="flex items-center">
+                      <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
+                        <span className="text-sm font-medium text-indigo-700">
+                          {reviewer.full_name.charAt(0)}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">{reviewer.full_name}</p>
+                        <p className="text-xs text-slate-500">{reviewer.email}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </CardBody>
