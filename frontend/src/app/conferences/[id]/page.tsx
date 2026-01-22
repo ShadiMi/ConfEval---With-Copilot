@@ -1,23 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
 import { conferencesApi } from '@/lib/api';
-import { ConferenceWithSessions } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { ConferenceWithSessions } from '@/types';
 import {
-  Calendar,
-  MapPin,
-  Layers,
-  ArrowLeft,
-  Clock,
-  Users,
+    ArrowLeft,
+    Calendar,
+    Clock,
+    Layers,
+    MapPin,
+    Users,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function ConferenceDetailsPage() {
   const params = useParams();

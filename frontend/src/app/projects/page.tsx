@@ -1,45 +1,42 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import Modal from '@/components/ui/Modal';
-import Input from '@/components/ui/Input';
-import Textarea from '@/components/ui/Textarea';
-import Select from '@/components/ui/Select';
+import Button from '@/components/ui/Button';
+import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import EmptyState from '@/components/ui/EmptyState';
+import Input from '@/components/ui/Input';
+import Modal from '@/components/ui/Modal';
+import Textarea from '@/components/ui/Textarea';
+import { projectsApi, tagsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { projectsApi, sessionsApi, tagsApi } from '@/lib/api';
-import { Project, Session, Tag, PendingInvitation } from '@/types';
 import { formatDate } from '@/lib/utils';
-import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { PendingInvitation, Project, Tag } from '@/types';
 import {
-  FolderKanban,
-  Plus,
-  Upload,
-  FileText,
-  Presentation,
-  File,
-  Users,
-  Mail,
-  Star,
+    File,
+    FileText,
+    FolderKanban,
+    Mail,
+    Plus,
+    Presentation,
+    Star,
+    Upload,
+    Users,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 
 export default function ProjectsPage() {
   const { user } = useAuthStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [invitations, setInvitations] = useState<PendingInvitation[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModal, setCreateModal] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    session_id: '',
     tag_ids: [] as number[],
     team_member_emails: ['', ''] as string[],
     mentor_email: '',
@@ -54,14 +51,12 @@ export default function ProjectsPage() {
 
   const loadData = async () => {
     try {
-      const [projectsRes, sessionsRes, tagsRes, invitationsRes] = await Promise.all([
+      const [projectsRes, tagsRes, invitationsRes] = await Promise.all([
         projectsApi.getMyProjects(),
-        sessionsApi.listAvailable(),
         tagsApi.list(),
         projectsApi.getMyInvitations(),
       ]);
       setProjects(projectsRes.data);
-      setSessions(sessionsRes.data);
       setTags(tagsRes.data);
       setInvitations(invitationsRes.data);
     } catch (error) {
@@ -110,7 +105,6 @@ export default function ProjectsPage() {
       const response = await projectsApi.create({
         title: formData.title,
         description: formData.description,
-        session_id: formData.session_id ? parseInt(formData.session_id) : undefined,
         tag_ids: formData.tag_ids,
         team_member_emails: teamEmails,
         mentor_email: formData.mentor_email.trim() || undefined,
@@ -124,7 +118,6 @@ export default function ProjectsPage() {
       setFormData({
         title: '',
         description: '',
-        session_id: '',
         tag_ids: [],
         team_member_emails: ['', ''],
         mentor_email: '',
@@ -371,16 +364,6 @@ export default function ProjectsPage() {
             placeholder="Describe your project..."
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          />
-          <Select
-            label="Session"
-            options={[
-              { value: '', label: 'Select a session' },
-              ...sessions.map((s) => ({ value: s.id.toString(), label: s.name })),
-            ]}
-            value={formData.session_id}
-            onChange={(e) => setFormData({ ...formData, session_id: e.target.value })}
-            required
           />
           
           {/* Team Members */}

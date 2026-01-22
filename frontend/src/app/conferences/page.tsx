@@ -1,21 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardBody } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
 import { conferencesApi } from '@/lib/api';
-import { Conference, ConferenceWithSessions } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { Conference } from '@/types';
 import {
-  Calendar,
-  MapPin,
-  Layers,
-  ArrowRight,
-  ChevronRight,
+    Calendar,
+    ChevronRight,
+    Layers,
+    MapPin
 } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 export default function ConferencesListPage() {
   const [conferences, setConferences] = useState<Conference[]>([]);

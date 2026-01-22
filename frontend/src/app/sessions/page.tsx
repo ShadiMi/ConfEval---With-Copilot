@@ -1,30 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import Modal from '@/components/ui/Modal';
-import Input from '@/components/ui/Input';
-import Textarea from '@/components/ui/Textarea';
-import Select from '@/components/ui/Select';
+import Button from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
 import EmptyState from '@/components/ui/EmptyState';
+import Input from '@/components/ui/Input';
+import Modal from '@/components/ui/Modal';
+import Select from '@/components/ui/Select';
+import Textarea from '@/components/ui/Textarea';
+import { applicationsApi, conferencesApi, sessionsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { sessionsApi, applicationsApi, conferencesApi } from '@/lib/api';
-import { Session, ReviewerApplication, Conference } from '@/types';
 import { formatDate } from '@/lib/utils';
-import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { Conference, ReviewerApplication, Session } from '@/types';
 import {
-  Calendar,
-  MapPin,
-  Users,
-  Plus,
-  Clock,
-  Send,
-  Layers,
+    Calendar,
+    Clock,
+    Layers,
+    MapPin,
+    Plus,
+    Send,
+    Users,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 export default function SessionsPage() {
   const { user } = useAuthStore();
