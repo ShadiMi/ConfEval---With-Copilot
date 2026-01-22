@@ -1,28 +1,28 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardBody } from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
-import Textarea from '@/components/ui/Textarea';
 import Badge from '@/components/ui/Badge';
+import Button from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
+import Textarea from '@/components/ui/Textarea';
 import { conferencesApi, sessionsApi } from '@/lib/api';
-import { Conference, ConferenceWithSessions, Session } from '@/types';
 import { formatDate } from '@/lib/utils';
-import toast from 'react-hot-toast';
+import { Conference, ConferenceWithSessions, Session } from '@/types';
 import {
-  Plus,
-  Edit,
-  Trash2,
-  Calendar,
-  MapPin,
-  Layers,
-  Eye,
-  LinkIcon,
-  X,
+    Calendar,
+    Edit,
+    Eye,
+    Layers,
+    LinkIcon,
+    MapPin,
+    Plus,
+    Trash2,
+    X,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 export default function ConferencesPage() {
   const [conferences, setConferences] = useState<Conference[]>([]);

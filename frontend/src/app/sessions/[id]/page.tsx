@@ -1,43 +1,41 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
-import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
-import Modal from '@/components/ui/Modal';
+import Button from '@/components/ui/Button';
+import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
-import Textarea from '@/components/ui/Textarea';
+import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
+import Textarea from '@/components/ui/Textarea';
+import { applicationsApi, authApi, conferencesApi, criteriaApi, projectsApi, reviewsApi, sessionsApi, tagsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { sessionsApi, criteriaApi, projectsApi, reviewsApi, tagsApi, applicationsApi, authApi, conferencesApi } from '@/lib/api';
-import { SessionWithDetails, Criteria, ProjectWithStudent, Review, Tag, ReviewerApplication, User, Conference } from '@/types';
-import { formatDate, formatDateTime, getRoleLabel } from '@/lib/utils';
-import Link from 'next/link';
-import toast from 'react-hot-toast';
+import { formatDate, getRoleLabel } from '@/lib/utils';
+import { Conference, Criteria, ProjectWithStudent, Review, ReviewerApplication, SessionWithDetails, Tag, User } from '@/types';
 import {
-  Calendar,
-  MapPin,
-  Users,
-  ClipboardList,
-  FolderKanban,
-  ArrowLeft,
-  Plus,
-  Trash2,
-  Edit,
-  Clock,
-  X,
-  FileText,
-  Presentation,
-  File,
-  Star,
-  Tag as TagIcon,
-  Send,
-  UserPlus,
-  RefreshCw,
-  Layers,
+    ArrowLeft,
+    ClipboardList,
+    Clock,
+    Edit,
+    File,
+    FileText,
+    FolderKanban,
+    Layers,
+    MapPin,
+    Plus,
+    Presentation,
+    Send,
+    Star,
+    Tag as TagIcon,
+    Trash2,
+    UserPlus,
+    Users,
+    X
 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
 
 const statusOptions = [
   { value: 'upcoming', label: 'Upcoming' },
