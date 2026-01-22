@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script to create test data for the ConfEval application.
-Creates: 8 students, 4 internal reviewers, 4 external reviewers, 3 sessions, 12 projects
+Creates: 8 students, 4 internal reviewers, 4 external reviewers, 3 sessions, 12 projects, reviews
 """
 
 import sys
@@ -9,8 +9,9 @@ sys.path.insert(0, '.')
 
 from datetime import datetime, timedelta
 import bcrypt
+import random
 from app.database import SessionLocal
-from app.models import User, UserRole, Session, SessionStatus, Project, ProjectStatus, Tag
+from app.models import User, UserRole, Session, SessionStatus, Project, ProjectStatus, Tag, Review, CriteriaScore, Criteria
 
 # Test data identifier prefix - used to identify test data for deletion
 TEST_PREFIX = "test_"
@@ -221,7 +222,99 @@ def create_test_data():
         for session in sessions:
             session.reviewers = internal_reviewers[:2] + external_reviewers[:2]
         
+        db.flush()
+        
+        # Create criteria for each session
+        criteria_list = []
+        for session in sessions:
+            c1 = Criteria(
+                session_id=session.id,
+                name=f"{TEST_PREFIX}Technical Quality",
+                description="Evaluate the technical soundness and methodology",
+                max_score=10,
+                weight=1.0,
+                order=1
+            )
+            c2 = Criteria(
+                session_id=session.id,
+                name=f"{TEST_PREFIX}Innovation",
+                description="Novelty and originality of the approach",
+                max_score=10,
+                weight=1.0,
+                order=2
+            )
+            c3 = Criteria(
+                session_id=session.id,
+                name=f"{TEST_PREFIX}Presentation",
+                description="Clarity and quality of presentation",
+                max_score=10,
+                weight=0.5,
+                order=3
+            )
+            db.add_all([c1, c2, c3])
+            criteria_list.extend([c1, c2, c3])
+        
+        db.flush()
+        print(f"  Created {len(criteria_list)} criteria")
+        
+        # Create reviews for approved projects
+        reviews_created = 0
+        approved_projects = [p for p in projects if p.status == ProjectStatus.APPROVED.value]
+        all_reviewers = internal_reviewers + external_reviewers
+        
+        comments = [
+            "Excellent work! The methodology is sound and well-documented.",
+            "Good project overall. Some minor improvements could be made in the analysis section.",
+            "Interesting approach to the problem. The results are promising.",
+            "Well-structured project with clear objectives. Consider expanding the literature review.",
+            "Strong technical implementation. The conclusions are well-supported by the data.",
+        ]
+        
+        for project in approved_projects:
+            # Each approved project gets 2-3 reviews
+            num_reviews = random.randint(2, 3)
+            project_reviewers = random.sample(all_reviewers, num_reviews)
+            
+            # Get criteria for this project's session
+            session_criteria = [c for c in criteria_list if c.session_id == project.session_id]
+            
+            for reviewer in project_reviewers:
+                # Assign reviewer to project
+                if reviewer not in project.assigned_reviewers:
+                    project.assigned_reviewers.append(reviewer)
+                
+                # Create review
+                review = Review(
+                    project_id=project.id,
+                    reviewer_id=reviewer.id,
+                    comments=random.choice(comments),
+                    is_completed=True,
+                )
+                db.add(review)
+                db.flush()
+                
+                # Create criteria scores and calculate normalized total score
+                total_weighted_score = 0
+                total_weight = 0
+                for criteria in session_criteria:
+                    score = random.randint(6, 10)
+                    cs = CriteriaScore(
+                        review_id=review.id,
+                        criteria_id=criteria.id,
+                        score=score
+                    )
+                    db.add(cs)
+                    # Normalize score and apply weight (same as reviews.py)
+                    normalized = score / criteria.max_score
+                    total_weighted_score += normalized * criteria.weight
+                    total_weight += criteria.weight
+                
+                # Calculate total score as percentage (0-100)
+                review.total_score = (total_weighted_score / total_weight) * 100 if total_weight > 0 else 0
+                reviews_created += 1
+        
         db.commit()
+        print(f"  Created {reviews_created} reviews")
         
         print("\n✓ Test data created successfully!")
         print(f"\nTest user credentials (password: test123):")

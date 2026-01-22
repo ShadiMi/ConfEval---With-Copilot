@@ -31,7 +31,9 @@ async def list_reviews_for_project(
     
     # Check permissions
     if current_user.role == UserRole.STUDENT.value:
-        if project.student_id != current_user.id:
+        is_owner = project.student_id == current_user.id
+        is_team_member = any(m.id == current_user.id for m in project.team_members)
+        if not is_owner and not is_team_member:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"

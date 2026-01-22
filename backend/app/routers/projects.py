@@ -84,13 +84,52 @@ async def get_my_projects(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only students can access this endpoint"
         )
-    from sqlalchemy import or_
-    return db.query(Project).filter(
+    from sqlalchemy import or_, func
+    from app.models import Review
+    
+    projects = db.query(Project).filter(
         or_(
             Project.student_id == current_user.id,
             Project.team_members.any(id=current_user.id)
         )
     ).all()
+    
+    # Calculate avg_score and review_count for each project
+    result = []
+    for project in projects:
+        reviews = db.query(Review).filter(
+            Review.project_id == project.id,
+            Review.is_completed == True
+        ).all()
+        
+        # Calculate average only from reviews that have a total_score
+        reviews_with_scores = [r for r in reviews if r.total_score is not None]
+        avg_score = None
+        if reviews_with_scores:
+            avg_score = sum(r.total_score for r in reviews_with_scores) / len(reviews_with_scores)
+        
+        project_dict = {
+            "id": project.id,
+            "title": project.title,
+            "description": project.description,
+            "student_id": project.student_id,
+            "session_id": project.session_id,
+            "status": project.status,
+            "mentor_email": project.mentor_email,
+            "paper_path": project.paper_path,
+            "slides_path": project.slides_path,
+            "additional_docs_path": project.additional_docs_path,
+            "poster_number": project.poster_number,
+            "created_at": project.created_at,
+            "tags": project.tags,
+            "team_members": project.team_members,
+            "pending_invitations": project.pending_invitations,
+            "review_count": len(reviews_with_scores),
+            "avg_score": avg_score
+        }
+        result.append(project_dict)
+    
+    return result
 
 
 @router.get("/my/invitations")
@@ -414,7 +453,9 @@ async def get_project(
     
     # Check access permissions
     if current_user.role == UserRole.STUDENT.value:
-        if project.student_id != current_user.id:
+        is_owner = project.student_id == current_user.id
+        is_team_member = any(m.id == current_user.id for m in project.team_members)
+        if not is_owner and not is_team_member:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Access denied"
