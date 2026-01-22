@@ -194,6 +194,8 @@ class ProjectResponse(ProjectBase):
     tags: List[TagResponse] = []
     team_members: List[UserResponse] = []
     pending_invitations: List[TeamInvitationResponse] = []
+    avg_score: Optional[float] = None
+    review_count: int = 0
     
     class Config:
         from_attributes = True
@@ -202,6 +204,7 @@ class ProjectResponse(ProjectBase):
 class ProjectWithStudent(ProjectResponse):
     student: UserResponse
     assigned_reviewers: List[UserResponse] = []
+    session: Optional[SessionResponse] = None
     
     class Config:
         from_attributes = True

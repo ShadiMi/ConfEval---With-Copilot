@@ -139,7 +139,7 @@ async def create_application(
             message=f"{current_user.full_name} has applied to review session: {session.name}",
             link="/admin/applications"
         )
-        create_notification(notification, db)
+        create_notification(db, notification)
     
     return application
 
