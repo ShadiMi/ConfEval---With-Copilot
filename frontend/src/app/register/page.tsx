@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { authApi } from '@/lib/api';
-import { useAuthStore } from '@/lib/store';
+import Logo from '@/components/Logo';
+import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
-import Button from '@/components/ui/Button';
+import { authApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store';
+import { Building, CreditCard, FileText, Home, Info, Lock, Mail, Phone, Upload, User, UserPlus } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
-import { UserPlus, Mail, Lock, User, Building, Info, Upload, FileText, Home, CreditCard, Phone } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -196,6 +197,9 @@ export default function RegisterPage() {
             <Home className="w-4 h-4 mr-1" />
             Back to Home
           </Link>
+          <div className="flex justify-center mb-4">
+            <Logo size={56} />
+          </div>
           <h1 className="text-3xl font-bold text-primary-600">ConfEval</h1>
           <p className="mt-2 text-slate-600">Create your account</p>
         </div>

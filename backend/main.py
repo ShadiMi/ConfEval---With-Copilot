@@ -7,7 +7,7 @@ import os
 
 from app.config import settings
 from app.database import init_db
-from app.routers import auth, sessions, projects, criteria, reviews, applications, tags, notifications, reports
+from app.routers import auth, sessions, projects, criteria, reviews, applications, tags, notifications, reports, conferences
 
 
 @asynccontextmanager
@@ -75,6 +75,7 @@ app.include_router(applications.router, prefix="/api")
 app.include_router(tags.router, prefix="/api")
 app.include_router(notifications.router, prefix="/api")
 app.include_router(reports.router, prefix="/api")
+app.include_router(conferences.router, prefix="/api")
 
 
 @app.get("/api/health")

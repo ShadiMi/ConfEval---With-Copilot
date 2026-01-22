@@ -56,6 +56,7 @@ export interface Session {
   id: number;
   name: string;
   description?: string;
+  conference_id?: number;
   start_date: string;
   end_date: string;
   location?: string;
@@ -74,10 +75,40 @@ export interface SessionWithDetails extends Session {
 export interface SessionCreate {
   name: string;
   description?: string;
+  conference_id?: number;
   start_date: string;
   end_date: string;
   location?: string;
   max_projects?: number;
+}
+
+// Conference types
+export type ConferenceStatus = 'draft' | 'active' | 'completed' | 'archived';
+
+export interface Conference {
+  id: number;
+  name: string;
+  description?: string;
+  start_date: string;
+  end_date: string;
+  location?: string;
+  status: ConferenceStatus;
+  max_sessions: number;
+  created_at: string;
+}
+
+export interface ConferenceWithSessions extends Conference {
+  sessions: Session[];
+  session_count: number;
+}
+
+export interface ConferenceCreate {
+  name: string;
+  description?: string;
+  start_date: string;
+  end_date: string;
+  location?: string;
+  max_sessions?: number;
 }
 
 // Project types

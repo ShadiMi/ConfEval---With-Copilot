@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr, Field, validator
 from typing import Optional, List
 from datetime import datetime
-from app.models import UserRole, ProjectStatus, SessionStatus, ApplicationStatus, NotificationType, TeamInvitationStatus
+from app.models import UserRole, ProjectStatus, SessionStatus, ApplicationStatus, NotificationType, TeamInvitationStatus, ConferenceStatus
 
 
 # User Schemas
@@ -98,7 +98,7 @@ class SessionBase(BaseModel):
 
 
 class SessionCreate(SessionBase):
-    pass
+    conference_id: Optional[int] = None
 
 
 class SessionUpdate(BaseModel):
@@ -109,11 +109,13 @@ class SessionUpdate(BaseModel):
     location: Optional[str] = None
     status: Optional[SessionStatus] = None
     max_projects: Optional[int] = None
+    conference_id: Optional[int] = None
 
 
 class SessionResponse(SessionBase):
     id: int
     status: SessionStatus
+    conference_id: Optional[int] = None
     created_at: datetime
     
     class Config:
@@ -326,6 +328,48 @@ class NotificationResponse(BaseModel):
         from_attributes = True
 
 
+# Conference Schemas
+class ConferenceBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    description: Optional[str] = None
+    start_date: datetime
+    end_date: datetime
+    location: Optional[str] = None
+    max_sessions: int = Field(default=10, ge=1, le=100)
+
+
+class ConferenceCreate(ConferenceBase):
+    pass
+
+
+class ConferenceUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    description: Optional[str] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    location: Optional[str] = None
+    status: Optional[ConferenceStatus] = None
+    max_sessions: Optional[int] = Field(None, ge=1, le=100)
+
+
+class ConferenceResponse(ConferenceBase):
+    id: int
+    status: ConferenceStatus
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class ConferenceWithSessions(ConferenceResponse):
+    sessions: List[SessionResponse] = []
+    session_count: int = 0
+    
+    class Config:
+        from_attributes = True
+
+
 # Update forward references
 UserWithTags.model_rebuild()
 SessionWithDetails.model_rebuild()
+ConferenceWithSessions.model_rebuild()

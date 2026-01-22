@@ -1,38 +1,38 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Session } from '@/types';
-import { sessionsApi, statsApi } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
-import { useAuthStore } from '@/lib/store';
+import Logo from '@/components/Logo';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Card, CardBody } from '@/components/ui/Card';
+import { sessionsApi, statsApi } from '@/lib/api';
+import { useAuthStore } from '@/lib/store';
+import { formatDate } from '@/lib/utils';
+import { Session } from '@/types';
 import {
-  Calendar,
-  MapPin,
-  Users,
-  FolderKanban,
-  ClipboardCheck,
-  ArrowRight,
-  Star,
-  Upload,
-  UserPlus,
-  LogIn,
-  GraduationCap,
-  Award,
-  Shield,
-  FileText,
-  MessageSquare,
-  CheckCircle2,
-  Clock,
-  TrendingUp,
-  Zap,
-  BookOpen,
-  Target,
-  ChevronRight,
+    ArrowRight,
+    Award,
+    BookOpen,
+    Calendar,
+    CheckCircle2,
+    ChevronRight,
+    ClipboardCheck,
+    Clock,
+    FileText,
+    GraduationCap,
+    LogIn,
+    MapPin,
+    MessageSquare,
+    Shield,
+    Star,
+    Target,
+    TrendingUp,
+    Upload,
+    UserPlus,
+    Users,
+    Zap
 } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 export default function HomePage() {
   const { isAuthenticated, user } = useAuthStore();
@@ -69,9 +69,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-primary-700 rounded-xl flex items-center justify-center shadow-lg shadow-primary-600/20">
-                <ClipboardCheck className="w-5 h-5 text-white" />
-              </div>
+              <Logo size={40} />
               <div>
                 <span className="text-xl font-bold text-slate-900">ConfEval</span>
                 <span className="hidden sm:inline text-xs text-slate-500 ml-2">Conference Review System</span>

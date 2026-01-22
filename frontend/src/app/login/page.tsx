@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import Logo from '@/components/Logo';
+import Button from '@/components/ui/Button';
+import Input from '@/components/ui/Input';
 import { authApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import Input from '@/components/ui/Input';
-import Button from '@/components/ui/Button';
+import { Home, Lock, LogIn, Mail } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { Mail, Lock, LogIn, Home } from 'lucide-react';
 
 declare global {
   interface Window {
@@ -117,6 +118,9 @@ export default function LoginPage() {
             <Home className="w-4 h-4 mr-1" />
             Back to Home
           </Link>
+          <div className="flex justify-center mb-4">
+            <Logo size={56} />
+          </div>
           <h1 className="text-3xl font-bold text-primary-600">ConfEval</h1>
           <p className="mt-2 text-slate-600">Conference Review System</p>
         </div>

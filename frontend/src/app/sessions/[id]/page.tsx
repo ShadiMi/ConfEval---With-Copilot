@@ -11,8 +11,8 @@ import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
 import Select from '@/components/ui/Select';
 import { useAuthStore } from '@/lib/store';
-import { sessionsApi, criteriaApi, projectsApi, reviewsApi, tagsApi, applicationsApi, authApi } from '@/lib/api';
-import { SessionWithDetails, Criteria, ProjectWithStudent, Review, Tag, ReviewerApplication, User } from '@/types';
+import { sessionsApi, criteriaApi, projectsApi, reviewsApi, tagsApi, applicationsApi, authApi, conferencesApi } from '@/lib/api';
+import { SessionWithDetails, Criteria, ProjectWithStudent, Review, Tag, ReviewerApplication, User, Conference } from '@/types';
 import { formatDate, formatDateTime, getRoleLabel } from '@/lib/utils';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -36,6 +36,7 @@ import {
   Send,
   UserPlus,
   RefreshCw,
+  Layers,
 } from 'lucide-react';
 
 const statusOptions = [
@@ -53,6 +54,7 @@ export default function SessionDetailPage() {
   const isReviewer = user?.role === 'internal_reviewer' || user?.role === 'external_reviewer';
 
   const [session, setSession] = useState<SessionWithDetails | null>(null);
+  const [conference, setConference] = useState<Conference | null>(null);
   const [projects, setProjects] = useState<ProjectWithStudent[]>([]);
   const [allTags, setAllTags] = useState<Tag[]>([]);
   const [myApplications, setMyApplications] = useState<ReviewerApplication[]>([]);
@@ -69,6 +71,7 @@ export default function SessionDetailPage() {
   
   // Session edit modal
   const [editSessionModal, setEditSessionModal] = useState(false);
+  const [conferences, setConferences] = useState<Conference[]>([]);
   const [sessionForm, setSessionForm] = useState({
     name: '',
     description: '',
@@ -77,6 +80,7 @@ export default function SessionDetailPage() {
     location: '',
     status: '',
     max_projects: 50,
+    conference_id: '' as string | number,
   });
   
   // Criteria modal
@@ -110,18 +114,30 @@ export default function SessionDetailPage() {
 
   const loadData = async () => {
     try {
-      const [sessionRes, projectsRes, tagsRes, appsRes, studentsRes] = await Promise.all([
+      const [sessionRes, projectsRes, tagsRes, appsRes, studentsRes, conferencesRes] = await Promise.all([
         sessionsApi.get(sessionId),
         projectsApi.list({ session_id: sessionId }),
         tagsApi.list(),
         isReviewer ? applicationsApi.getMyApplications() : Promise.resolve({ data: [] }),
         isAdmin ? authApi.getUsers('student') : Promise.resolve({ data: [] }),
+        conferencesApi.list().catch(() => ({ data: [] })),
       ]);
       setSession(sessionRes.data);
       setProjects(projectsRes.data);
       setAllTags(tagsRes.data);
       setMyApplications(appsRes.data);
       setAllStudents(studentsRes.data);
+      setConferences(conferencesRes.data);
+      
+      // Fetch conference if session has one
+      if (sessionRes.data.conference_id) {
+        try {
+          const confRes = await conferencesApi.get(sessionRes.data.conference_id);
+          setConference(confRes.data);
+        } catch (error) {
+          console.error('Error loading conference:', error);
+        }
+      }
     } catch (error) {
       console.error('Error loading session:', error);
       toast.error('Failed to load session');
@@ -180,6 +196,7 @@ export default function SessionDetailPage() {
       location: session.location || '',
       status: session.status,
       max_projects: session.max_projects,
+      conference_id: session.conference_id || '',
     });
     setEditSessionModal(true);
   };
@@ -189,7 +206,10 @@ export default function SessionDetailPage() {
     setSubmitting(true);
     
     try {
-      await sessionsApi.update(sessionId, sessionForm);
+      await sessionsApi.update(sessionId, {
+        ...sessionForm,
+        conference_id: sessionForm.conference_id ? Number(sessionForm.conference_id) : null,
+      });
       toast.success('Session updated');
       setEditSessionModal(false);
       loadData();
@@ -504,6 +524,15 @@ export default function SessionDetailPage() {
               <h1 className="text-2xl font-bold text-slate-900">{session.name}</h1>
               <Badge status={session.status}>{session.status}</Badge>
             </div>
+            {conference && (
+              <Link 
+                href={`/conferences/${conference.id}`}
+                className="flex items-center gap-2 mt-2 text-primary-600 hover:text-primary-700 hover:underline"
+              >
+                <Layers className="w-4 h-4" />
+                <span className="font-medium">{conference.name}</span>
+              </Link>
+            )}
             {session.description && (
               <p className="text-slate-600 mt-2">{session.description}</p>
             )}
@@ -883,6 +912,18 @@ export default function SessionDetailPage() {
             options={statusOptions}
             value={sessionForm.status}
             onChange={(e) => setSessionForm({ ...sessionForm, status: e.target.value })}
+          />
+          <Select
+            label="Conference (Optional)"
+            options={[
+              { value: '', label: 'No Conference' },
+              ...conferences.map((conf) => ({
+                value: String(conf.id),
+                label: conf.name,
+              })),
+            ]}
+            value={sessionForm.conference_id}
+            onChange={(e) => setSessionForm({ ...sessionForm, conference_id: e.target.value })}
           />
           <div className="flex justify-end gap-3 pt-4">
             <Button type="button" variant="secondary" onClick={() => setEditSessionModal(false)}>

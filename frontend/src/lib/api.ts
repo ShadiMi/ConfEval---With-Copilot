@@ -383,3 +383,42 @@ export const notificationsApi = {
   
   clearAll: () => api.delete('/notifications/clear-all'),
 };
+
+// Conferences API
+export const conferencesApi = {
+  listPublic: () => api.get('/conferences/public'),
+  
+  list: (status?: string) => 
+    api.get('/conferences', { params: { status } }),
+  
+  get: (id: number) => api.get(`/conferences/${id}`),
+  
+  create: (data: {
+    name: string;
+    description?: string;
+    start_date: string;
+    end_date: string;
+    location?: string;
+    max_sessions?: number;
+  }) => api.post('/conferences', data),
+  
+  update: (id: number, data: {
+    name?: string;
+    description?: string;
+    start_date?: string;
+    end_date?: string;
+    location?: string;
+    status?: string;
+    max_sessions?: number;
+  }) => api.put(`/conferences/${id}`, data),
+  
+  delete: (id: number) => api.delete(`/conferences/${id}`),
+  
+  getSessions: (id: number) => api.get(`/conferences/${id}/sessions`),
+  
+  addSession: (conferenceId: number, sessionId: number) => 
+    api.post(`/conferences/${conferenceId}/sessions/${sessionId}`),
+  
+  removeSession: (conferenceId: number, sessionId: number) => 
+    api.delete(`/conferences/${conferenceId}/sessions/${sessionId}`),
+};
