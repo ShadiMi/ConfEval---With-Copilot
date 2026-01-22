@@ -30,6 +30,7 @@ import {
   Calendar,
   Tag as TagIcon,
   Download,
+  FolderKanban,
 } from 'lucide-react';
 
 export default function ProjectDetailPage() {
@@ -65,7 +66,10 @@ export default function ProjectDetailPage() {
     try {
       const [projectRes, reviewsRes, tagsRes] = await Promise.all([
         projectsApi.get(projectId),
-        reviewsApi.listForProject(projectId).catch(() => ({ data: [] })),
+        reviewsApi.listForProject(projectId).catch((err) => {
+          console.error('Failed to load reviews:', err);
+          return { data: [] };
+        }),
         tagsApi.list(),
       ]);
       setProject(projectRes.data);
@@ -416,11 +420,11 @@ export default function ProjectDetailPage() {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-slate-900">Reviews</h2>
+                  <h2 className="font-semibold text-slate-900">Reviews ({reviews.length})</h2>
                   {averageScore !== null && (
                     <div className="flex items-center text-yellow-500">
                       <Star className="w-5 h-5 fill-current mr-1" />
-                      <span className="font-medium">{averageScore.toFixed(1)}</span>
+                      <span className="font-medium">Avg: {averageScore.toFixed(1)}</span>
                     </div>
                   )}
                 </div>
@@ -454,8 +458,30 @@ export default function ProjectDetailPage() {
                           </Badge>
                         )}
                       </div>
+                      
+                      {/* Criteria Scores */}
+                      {review.criteria_scores && review.criteria_scores.length > 0 && (
+                        <div className="mt-3 mb-3 bg-slate-50 rounded-lg p-3">
+                          <p className="text-xs font-medium text-slate-500 mb-2">Criteria Scores</p>
+                          <div className="flex flex-wrap gap-x-6 gap-y-1">
+                            {review.criteria_scores.map((cs) => (
+                              <span key={cs.id} className="text-sm">
+                                <span className="text-slate-600">{cs.criteria.name}:</span>
+                                <span className="font-medium text-slate-900 ml-1">
+                                  {cs.score}/{cs.criteria.max_score}
+                                </span>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Comments */}
                       {review.comments && (
-                        <p className="text-sm text-slate-600 mt-2">{review.comments}</p>
+                        <div className="mt-2 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                          <p className="text-xs font-medium text-blue-700 mb-1">Comments</p>
+                          <p className="text-sm text-slate-700 whitespace-pre-wrap">{review.comments}</p>
+                        </div>
                       )}
                     </div>
                   ))}
@@ -526,6 +552,23 @@ export default function ProjectDetailPage() {
                   <p className="font-medium text-slate-900">{formatDateTime(project.created_at)}</p>
                 </div>
               </div>
+              {project.session && (
+                <div className="flex items-center">
+                  <FolderKanban className="w-5 h-5 text-slate-400 mr-3" />
+                  <div>
+                    <p className="text-sm text-slate-500">Session</p>
+                    <Link 
+                      href={`/sessions/${project.session.id}`}
+                      className="font-medium text-primary-600 hover:text-primary-700"
+                    >
+                      {project.session.name}
+                    </Link>
+                    <p className="text-xs text-slate-500">
+                      {formatDate(project.session.start_date)} - {formatDate(project.session.end_date)}
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardBody>
           </Card>
 

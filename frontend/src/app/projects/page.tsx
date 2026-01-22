@@ -25,6 +25,7 @@ import {
   File,
   Users,
   Mail,
+  Star,
 } from 'lucide-react';
 
 export default function ProjectsPage() {
@@ -271,6 +272,19 @@ export default function ProjectsPage() {
                           <span>Poster #{project.poster_number}</span>
                         )}
                       </div>
+                      
+                      {/* Average Score */}
+                      {project.review_count && project.review_count > 0 && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                          <span className="text-sm font-medium text-slate-700">
+                            Avg Score: {project.avg_score?.toFixed(1) ?? 'N/A'}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            ({project.review_count} {project.review_count === 1 ? 'review' : 'reviews'})
+                          </span>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="flex items-center gap-2">
