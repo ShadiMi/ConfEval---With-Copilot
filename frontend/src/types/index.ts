@@ -146,11 +146,14 @@ export interface Project {
   tags: Tag[];
   team_members?: User[];
   pending_invitations?: TeamInvitation[];
+  avg_score?: number;
+  review_count?: number;
 }
 
 export interface ProjectWithStudent extends Project {
   student: User;
   assigned_reviewers?: { id: number; full_name: string; email: string }[];
+  session?: Session;
 }
 
 export interface ProjectCreate {
