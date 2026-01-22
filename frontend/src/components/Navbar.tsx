@@ -1,31 +1,32 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { authApi, notificationsApi, projectsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { cn, getRoleLabel } from '@/lib/utils';
+import { cn, formatDate, getRoleLabel } from '@/lib/utils';
+import { Notification } from '@/types';
 import {
-  LayoutDashboard,
-  FolderKanban,
+  BarChart3,
+  Bell,
   Calendar,
-  Users,
+  ChevronDown,
   ClipboardList,
   FileCheck,
-  Tags,
-  Settings,
+  FolderKanban,
+  Home,
+  Layers,
+  LayoutDashboard,
   LogOut,
   Menu,
-  X,
-  ChevronDown,
-  Bell,
-  Home,
+  Settings,
+  Tags,
   UserCog,
-  BarChart3,
+  Users,
+  X,
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { notificationsApi, authApi, projectsApi } from '@/lib/api';
-import { Notification } from '@/types';
-import { formatDate } from '@/lib/utils';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import Logo from './Logo';
 
 interface NavItem {
   label: string;
@@ -55,6 +56,12 @@ const navItems: NavItem[] = [
     label: 'Sessions',
     href: '/sessions',
     icon: Calendar,
+  },
+  {
+    label: 'Conferences',
+    href: '/admin/conferences',
+    icon: Layers,
+    roles: ['admin'],
   },
   {
     label: 'Projects',
@@ -225,8 +232,9 @@ export default function Navbar() {
           {/* Logo and Desktop Nav */}
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-xl font-bold text-primary-600">
-                ConfEval
+              <Link href="/" className="flex items-center space-x-2">
+                <Logo size={40} />
+                <span className="text-xl font-bold text-primary-600">ConfEval</span>
               </Link>
             </div>
             <div className="hidden md:ml-8 md:flex md:space-x-2">

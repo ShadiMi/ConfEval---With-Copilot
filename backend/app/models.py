@@ -27,6 +27,13 @@ class SessionStatus(str, enum.Enum):
     COMPLETED = "completed"
 
 
+class ConferenceStatus(str, enum.Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    ARCHIVED = "archived"
+
+
 class ApplicationStatus(str, enum.Enum):
     PENDING = "pending"
     APPROVED = "approved"
@@ -137,12 +144,31 @@ class Tag(Base):
     sessions = relationship("Session", secondary=session_tags, back_populates="tags")
 
 
+class Conference(Base):
+    __tablename__ = "conferences"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    start_date = Column(DateTime(timezone=True), nullable=False)
+    end_date = Column(DateTime(timezone=True), nullable=False)
+    location = Column(String(255), nullable=True)
+    status = Column(String(50), default=ConferenceStatus.DRAFT)
+    max_sessions = Column(Integer, default=10)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    sessions = relationship("Session", back_populates="conference", cascade="all, delete-orphan")
+
+
 class Session(Base):
     __tablename__ = "sessions"
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
+    conference_id = Column(Integer, ForeignKey("conferences.id", ondelete="SET NULL"), nullable=True)
     start_date = Column(DateTime(timezone=True), nullable=False)
     end_date = Column(DateTime(timezone=True), nullable=False)
     location = Column(String(255), nullable=True)
@@ -152,6 +178,7 @@ class Session(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationships
+    conference = relationship("Conference", back_populates="sessions")
     projects = relationship("Project", back_populates="session", cascade="all, delete-orphan")
     criteria = relationship("Criteria", back_populates="session", cascade="all, delete-orphan")
     reviewers = relationship("User", secondary=session_reviewers, back_populates="assigned_sessions")

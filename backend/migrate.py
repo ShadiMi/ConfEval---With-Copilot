@@ -101,6 +101,36 @@ except sqlite3.OperationalError as e:
     else:
         print(f'✗ Error adding mentor_email: {e}')
 
+# Create conferences table
+try:
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS conferences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name VARCHAR(255) NOT NULL,
+            description TEXT,
+            start_date TIMESTAMP NOT NULL,
+            end_date TIMESTAMP NOT NULL,
+            location VARCHAR(255),
+            status VARCHAR(50) DEFAULT 'draft',
+            max_sessions INTEGER DEFAULT 10,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP
+        )
+    ''')
+    print('✓ Created/verified conferences table')
+except sqlite3.OperationalError as e:
+    print(f'✗ Error with conferences: {e}')
+
+# Add conference_id column to sessions table
+try:
+    cursor.execute('ALTER TABLE sessions ADD COLUMN conference_id INTEGER REFERENCES conferences(id) ON DELETE SET NULL')
+    print('✓ Added conference_id column to sessions')
+except sqlite3.OperationalError as e:
+    if 'duplicate column name' in str(e):
+        print('  conference_id column already exists')
+    else:
+        print(f'✗ Error adding conference_id: {e}')
+
 conn.commit()
 conn.close()
 print('\nMigration complete!')

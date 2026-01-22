@@ -8,10 +8,11 @@ import Badge from '@/components/ui/Badge';
 import Modal from '@/components/ui/Modal';
 import Input from '@/components/ui/Input';
 import Textarea from '@/components/ui/Textarea';
+import Select from '@/components/ui/Select';
 import EmptyState from '@/components/ui/EmptyState';
 import { useAuthStore } from '@/lib/store';
-import { sessionsApi, applicationsApi } from '@/lib/api';
-import { Session, ReviewerApplication } from '@/types';
+import { sessionsApi, applicationsApi, conferencesApi } from '@/lib/api';
+import { Session, ReviewerApplication, Conference } from '@/types';
 import { formatDate } from '@/lib/utils';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -22,11 +23,13 @@ import {
   Plus,
   Clock,
   Send,
+  Layers,
 } from 'lucide-react';
 
 export default function SessionsPage() {
   const { user } = useAuthStore();
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [conferences, setConferences] = useState<Conference[]>([]);
   const [loading, setLoading] = useState(true);
   const [createModal, setCreateModal] = useState(false);
   const [applyModal, setApplyModal] = useState(false);
@@ -39,6 +42,7 @@ export default function SessionsPage() {
     end_date: '',
     location: '',
     max_projects: 50,
+    conference_id: '' as string | number,
   });
   const [applyMessage, setApplyMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -49,19 +53,27 @@ export default function SessionsPage() {
 
   const loadData = async () => {
     try {
-      const [sessionsRes, appsRes] = await Promise.all([
+      const [sessionsRes, appsRes, conferencesRes] = await Promise.all([
         sessionsApi.list(),
         user?.role === 'internal_reviewer' || user?.role === 'external_reviewer'
           ? applicationsApi.getMyApplications()
           : Promise.resolve({ data: [] }),
+        conferencesApi.list().catch(() => ({ data: [] })),
       ]);
       setSessions(sessionsRes.data);
       setMyApplications(appsRes.data);
+      setConferences(conferencesRes.data);
     } catch (error) {
       console.error('Error loading sessions:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const getConferenceName = (conferenceId?: number) => {
+    if (!conferenceId) return null;
+    const conference = conferences.find(c => c.id === conferenceId);
+    return conference?.name || null;
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -73,6 +85,7 @@ export default function SessionsPage() {
         ...formData,
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
+        conference_id: formData.conference_id ? Number(formData.conference_id) : undefined,
       });
       toast.success('Session created successfully');
       setCreateModal(false);
@@ -83,6 +96,7 @@ export default function SessionsPage() {
         end_date: '',
         location: '',
         max_projects: 50,
+        conference_id: '',
       });
       loadData();
     } catch (error: any) {
@@ -171,6 +185,18 @@ export default function SessionsPage() {
                   <h3 className="font-semibold text-slate-900">{session.name}</h3>
                   <Badge status={session.status}>{session.status}</Badge>
                 </div>
+                
+                {getConferenceName(session.conference_id) && (
+                  <div className="flex items-center gap-2 mb-3">
+                    <Layers className="w-4 h-4 text-primary-500" />
+                    <Link 
+                      href={`/conferences/${session.conference_id}`}
+                      className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
+                    >
+                      {getConferenceName(session.conference_id)}
+                    </Link>
+                  </div>
+                )}
                 
                 {session.description && (
                   <p className="text-sm text-slate-600 mb-4 line-clamp-2">
@@ -267,6 +293,19 @@ export default function SessionsPage() {
             placeholder="Main Conference Hall"
             value={formData.location}
             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+          />
+          <Select
+            label="Conference (Optional)"
+            value={formData.conference_id}
+            onChange={(e) => setFormData({ ...formData, conference_id: e.target.value })}
+            placeholder="No Conference"
+            options={[
+              { value: '', label: 'No Conference' },
+              ...conferences.map((conf) => ({
+                value: String(conf.id),
+                label: conf.name,
+              })),
+            ]}
           />
           <Input
             type="number"
