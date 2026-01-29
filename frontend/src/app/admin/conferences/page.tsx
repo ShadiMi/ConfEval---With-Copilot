@@ -8,38 +8,63 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import Textarea from '@/components/ui/Textarea';
 import { conferencesApi, sessionsApi } from '@/lib/api';
-import { formatDate } from '@/lib/utils';
+import { extractErrorMessage, formatDate } from '@/lib/utils'; // ✅ ADD extractErrorMessage
 import { Conference, ConferenceWithSessions, Session } from '@/types';
 import {
-    Calendar,
-    Edit,
-    Eye,
-    Layers,
-    LinkIcon,
-    MapPin,
-    Plus,
-    Trash2,
-    X,
+  Calendar,
+  Edit,
+  Eye,
+  Layers,
+  LinkIcon,
+  MapPin,
+  Plus,
+  Trash2,
+  X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+
+const BUILDINGS = ['לגסי', 'אינשטיין', 'ספרא', 'מינקוף', 'קציר', 'שמעון'] as const;
+
+const roomsForFloor = (floor: '' | 1 | 2) => {
+  if (floor === 1) return Array.from({ length: 9 }, (_, i) => 101 + i); // 101..109
+  if (floor === 2) return Array.from({ length: 9 }, (_, i) => 201 + i); // 201..209
+  return [];
+};
 
 export default function ConferencesPage() {
   const [conferences, setConferences] = useState<Conference[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showAddSessionModal, setShowAddSessionModal] = useState(false);
-  const [selectedConference, setSelectedConference] = useState<ConferenceWithSessions | null>(null);
-  const [formData, setFormData] = useState({
+
+  const [selectedConference, setSelectedConference] =
+    useState<ConferenceWithSessions | null>(null);
+
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    start_date: string;
+    end_date: string;
+    location: string;
+    max_sessions: number;
+    building: string;
+    floor: '' | 1 | 2;
+    room_number: '' | number;
+  }>({
     name: '',
     description: '',
     start_date: '',
     end_date: '',
     location: '',
     max_sessions: 10,
+    building: '',
+    floor: '',
+    room_number: '',
   });
 
   useEffect(() => {
@@ -47,12 +72,18 @@ export default function ConferencesPage() {
     loadSessions();
   }, []);
 
+  // ✅ Reset room when floor changes
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, room_number: '' }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.floor]);
+
   const loadConferences = async () => {
     try {
       const res = await conferencesApi.list();
       setConferences(res.data);
     } catch (error) {
-      toast.error('Failed to load conferences');
+      toast.error(extractErrorMessage(error, 'Failed to load conferences'));
     } finally {
       setLoading(false);
     }
@@ -63,42 +94,78 @@ export default function ConferencesPage() {
       const res = await sessionsApi.list();
       setSessions(res.data);
     } catch (error) {
-      console.error('Failed to load sessions');
+      console.error('Failed to load sessions', error);
     }
   };
 
   const handleCreate = async () => {
     try {
+      const computedLocation =
+        formData.location?.trim() ||
+        (formData.building && formData.floor && formData.room_number
+          ? `${formData.building}, קומה ${formData.floor}, חדר ${formData.room_number}`
+          : undefined);
+
       await conferencesApi.create({
-        ...formData,
+        name: formData.name,
+        description: formData.description,
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
+        max_sessions: formData.max_sessions,
+
+        // ✅ فقط location
+        location: computedLocation,
       });
+
       toast.success('Conference created successfully');
       setShowCreateModal(false);
       resetForm();
       loadConferences();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to create conference');
+      toast.error(extractErrorMessage(error, 'Failed to create conference'));
     }
   };
 
+
   const handleUpdate = async () => {
     if (!selectedConference) return;
+
+    // ✅ validation: if one of them selected, require all 3
+    const hasAny = !!(formData.building || formData.floor || formData.room_number);
+    const hasAll = !!(formData.building && formData.floor !== '' && formData.room_number !== '');
+
+    if (hasAny && !hasAll) {
+      toast.error('בחר בניין + קומה + חדר (חובה ביחד)');
+      return;
+    }
+
     try {
       await conferencesApi.update(selectedConference.id, {
-        ...formData,
+        name: formData.name,
+        description: formData.description,
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
+        max_sessions: formData.max_sessions,
+
+        // ✅ send real values
+        building: formData.building || undefined,
+        floor: formData.floor === '' ? undefined : formData.floor,
+        room_number: formData.room_number === '' ? undefined : Number(formData.room_number),
+
+        // ✅ IMPORTANT: do NOT send location here
+        location: undefined,
       });
+
       toast.success('Conference updated successfully');
       setShowEditModal(false);
       resetForm();
       loadConferences();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to update conference');
+      toast.error(extractErrorMessage(error, 'Failed to update conference'));
     }
   };
+
+  
 
   const handleDelete = async (id: number) => {
     if (!confirm('Are you sure you want to delete this conference?')) return;
@@ -107,7 +174,7 @@ export default function ConferencesPage() {
       toast.success('Conference deleted successfully');
       loadConferences();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to delete conference');
+      toast.error(extractErrorMessage(error, 'Failed to delete conference'));
     }
   };
 
@@ -117,7 +184,7 @@ export default function ConferencesPage() {
       toast.success('Status updated');
       loadConferences();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to update status');
+      toast.error(extractErrorMessage(error, 'Failed to update status'));
     }
   };
 
@@ -127,7 +194,7 @@ export default function ConferencesPage() {
       setSelectedConference(res.data);
       setShowDetailsModal(true);
     } catch (error) {
-      toast.error('Failed to load conference details');
+      toast.error(extractErrorMessage(error, 'Failed to load conference details'));
     }
   };
 
@@ -140,7 +207,7 @@ export default function ConferencesPage() {
       setSelectedConference(res.data);
       loadSessions();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to add session');
+      toast.error(extractErrorMessage(error, 'Failed to add session'));
     }
   };
 
@@ -153,12 +220,13 @@ export default function ConferencesPage() {
       setSelectedConference(res.data);
       loadSessions();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to remove session');
+      toast.error(extractErrorMessage(error, 'Failed to remove session'));
     }
   };
 
   const openEditModal = (conference: Conference) => {
     setSelectedConference(conference as ConferenceWithSessions);
+
     setFormData({
       name: conference.name,
       description: conference.description || '',
@@ -166,7 +234,12 @@ export default function ConferencesPage() {
       end_date: conference.end_date.slice(0, 16),
       location: conference.location || '',
       max_sessions: conference.max_sessions,
+
+      building: (conference as any).building || '',
+      floor: ((conference as any).floor ?? '') as '' | 1 | 2,
+      room_number: ((conference as any).room_number ?? '') as '' | number,
     });
+
     setShowEditModal(true);
   };
 
@@ -178,6 +251,9 @@ export default function ConferencesPage() {
       end_date: '',
       location: '',
       max_sessions: 10,
+      building: '',
+      floor: '',
+      room_number: '',
     });
     setSelectedConference(null);
   };
@@ -192,11 +268,7 @@ export default function ConferencesPage() {
     return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
   };
 
-  const availableSessions = sessions.filter(
-    s => !s.conference_id || (selectedConference && s.conference_id === selectedConference.id)
-  );
-
-  const unassignedSessions = sessions.filter(s => !s.conference_id);
+  const unassignedSessions = sessions.filter((s) => !s.conference_id);
 
   if (loading) {
     return (
@@ -247,28 +319,33 @@ export default function ConferencesPage() {
                     <h3 className="text-lg font-semibold text-slate-900">{conference.name}</h3>
                     {getStatusBadge(conference.status)}
                   </div>
-                  
+
                   {conference.description && (
-                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">{conference.description}</p>
+                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">
+                      {conference.description}
+                    </p>
                   )}
-                  
+
                   <div className="space-y-2 text-sm text-slate-600 mb-4">
                     <div className="flex items-center">
                       <Calendar className="w-4 h-4 mr-2" />
                       {formatDate(conference.start_date)} - {formatDate(conference.end_date)}
                     </div>
-                    {conference.location && (
-                      <div className="flex items-center">
-                        <MapPin className="w-4 h-4 mr-2" />
-                        {conference.location}
-                      </div>
+                  {conference.location && (
+                    <div className="flex items-center">
+                      <MapPin className="w-4 h-4 mr-2" />
+                      <span className="text-slate-500 mr-1">Conference:</span>
+                      <span className="text-slate-900 font-medium">{conference.location}</span>
+                    </div>
                     )}
+
+                    
                     <div className="flex items-center">
                       <Layers className="w-4 h-4 mr-2" />
                       Max {conference.max_sessions} sessions
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 pt-4 border-t border-slate-200">
                     <Button variant="ghost" size="sm" onClick={() => handleViewDetails(conference)}>
                       <Eye className="w-4 h-4 mr-1" />
@@ -278,11 +355,16 @@ export default function ConferencesPage() {
                       <Edit className="w-4 h-4 mr-1" />
                       Edit
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDelete(conference.id)} className="text-red-600 hover:text-red-700">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(conference.id)}
+                      className="text-red-600 hover:text-red-700"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
-                  
+
                   {/* Status Actions */}
                   <div className="flex flex-wrap gap-1 mt-3">
                     {conference.status === 'draft' && (
@@ -301,12 +383,12 @@ export default function ConferencesPage() {
                       </Button>
                     )}
                   </div>
-                </CardBody>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+          </CardBody>
+        </Card>
+      ))}
+    </div>
+  )}
+</div>
 
       {/* Create Modal */}
       <Modal
@@ -325,6 +407,7 @@ export default function ConferencesPage() {
             placeholder="Enter conference name"
             required
           />
+
           <Textarea
             label="Description"
             value={formData.description}
@@ -332,6 +415,7 @@ export default function ConferencesPage() {
             placeholder="Enter description"
             rows={3}
           />
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Start Date"
@@ -348,12 +432,73 @@ export default function ConferencesPage() {
               required
             />
           </div>
-          <Input
-            label="Location"
-            value={formData.location}
-            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            placeholder="Enter location"
-          />
+
+          {/* Building / Floor / Room */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Building</label>
+              <select
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={formData.building}
+                onChange={(e) => setFormData({ ...formData, building: e.target.value })}
+              >
+                <option value="">Select building</option>
+                {BUILDINGS.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Floor</label>
+              <select
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={formData.floor}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    floor: (e.target.value ? Number(e.target.value) : '') as '' | 1 | 2,
+                  })
+                }
+              >
+                <option value="">Select floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Room</label>
+              <select
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={formData.room_number}
+                disabled={formData.floor === ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    room_number: (e.target.value ? Number(e.target.value) : '') as '' | number,
+                  })
+                }
+              >
+                <option value="">Select room</option>
+                {roomsForFloor(formData.floor).map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Preview */}
+          {formData.building && formData.floor && formData.room_number && (
+            <p className="text-xs text-slate-500">
+              Location Preview: {formData.building}, קומה {formData.floor}, חדר {formData.room_number}
+            </p>
+          )}
+
           <Input
             label="Max Sessions"
             type="number"
@@ -362,11 +507,15 @@ export default function ConferencesPage() {
             min={1}
             max={100}
           />
+
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => {
-              setShowCreateModal(false);
-              resetForm();
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCreateModal(false);
+                resetForm();
+              }}
+            >
               Cancel
             </Button>
             <Button onClick={handleCreate} disabled={!formData.name || !formData.start_date || !formData.end_date}>
@@ -393,6 +542,7 @@ export default function ConferencesPage() {
             placeholder="Enter conference name"
             required
           />
+
           <Textarea
             label="Description"
             value={formData.description}
@@ -400,6 +550,7 @@ export default function ConferencesPage() {
             placeholder="Enter description"
             rows={3}
           />
+
           <div className="grid grid-cols-2 gap-4">
             <Input
               label="Start Date"
@@ -416,12 +567,73 @@ export default function ConferencesPage() {
               required
             />
           </div>
-          <Input
-            label="Location"
-            value={formData.location}
-            onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-            placeholder="Enter location"
-          />
+
+          {/* Building / Floor / Room */}
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Building</label>
+              <select
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={formData.building}
+                onChange={(e) => setFormData({ ...formData, building: e.target.value })}
+              >
+                <option value="">Select building</option>
+                {BUILDINGS.map((b) => (
+                  <option key={b} value={b}>
+                    {b}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Floor</label>
+              <select
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={formData.floor}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    floor: (e.target.value ? Number(e.target.value) : '') as '' | 1 | 2,
+                  })
+                }
+              >
+                <option value="">Select floor</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Room</label>
+              <select
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                value={formData.room_number}
+                disabled={formData.floor === ''}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    room_number: (e.target.value ? Number(e.target.value) : '') as '' | number,
+                  })
+                }
+              >
+                <option value="">Select room</option>
+                {roomsForFloor(formData.floor).map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Preview */}
+          {formData.building && formData.floor && formData.room_number && (
+            <p className="text-xs text-slate-500">
+              Location Preview: {formData.building}, קומה {formData.floor}, חדר {formData.room_number}
+            </p>
+          )}
+
           <Input
             label="Max Sessions"
             type="number"
@@ -430,16 +642,18 @@ export default function ConferencesPage() {
             min={1}
             max={100}
           />
+
           <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => {
-              setShowEditModal(false);
-              resetForm();
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditModal(false);
+                resetForm();
+              }}
+            >
               Cancel
             </Button>
-            <Button onClick={handleUpdate}>
-              Update Conference
-            </Button>
+            <Button onClick={handleUpdate}>Update Conference</Button>
           </div>
         </div>
       </Modal>
@@ -462,11 +676,11 @@ export default function ConferencesPage() {
                 {selectedConference.session_count} / {selectedConference.max_sessions} sessions
               </span>
             </div>
-            
+
             {selectedConference.description && (
               <p className="text-slate-600">{selectedConference.description}</p>
             )}
-            
+
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="text-slate-500">Start Date:</span>
@@ -476,27 +690,31 @@ export default function ConferencesPage() {
                 <span className="text-slate-500">End Date:</span>
                 <span className="ml-2 text-slate-900">{formatDate(selectedConference.end_date)}</span>
               </div>
+
               {selectedConference.location && (
                 <div className="col-span-2">
-                  <span className="text-slate-500">Location:</span>
-                  <span className="ml-2 text-slate-900">{selectedConference.location}</span>
+                  <span className="text-slate-500">Conference:</span>
+                  <span className="ml-2 text-slate-900 font-medium">{selectedConference.location}</span>
                 </div>
               )}
+
+              
             </div>
-            
+
             {/* Sessions */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-semibold text-slate-900">Sessions</h4>
-                {(selectedConference.session_count || 0) < selectedConference.max_sessions && unassignedSessions.length > 0 && (
-                  <Button size="sm" onClick={() => setShowAddSessionModal(true)}>
-                    <LinkIcon className="w-4 h-4 mr-1" />
-                    Add Session
-                  </Button>
-                )}
+                {(selectedConference.session_count || 0) < selectedConference.max_sessions &&
+                  unassignedSessions.length > 0 && (
+                    <Button size="sm" onClick={() => setShowAddSessionModal(true)}>
+                      <LinkIcon className="w-4 h-4 mr-1" />
+                      Add Session
+                    </Button>
+                  )}
               </div>
-              
-              {(!selectedConference.sessions || selectedConference.sessions.length === 0) ? (
+
+              {!selectedConference.sessions || selectedConference.sessions.length === 0 ? (
                 <p className="text-sm text-slate-500">No sessions assigned to this conference yet.</p>
               ) : (
                 <div className="space-y-2">
