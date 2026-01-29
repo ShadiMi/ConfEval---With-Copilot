@@ -22,7 +22,16 @@ async def list_public_sessions(
         SessionModel.status.in_([SessionStatus.ACTIVE.value, SessionStatus.UPCOMING.value])
     ).order_by(SessionModel.start_date.asc()).all()
 
+from sqlalchemy.orm import selectinload
 
+@router.get("/", response_model=list[SessionResponse])
+def list_sessions(db: Session = Depends(get_db)):
+    sessions = (
+        db.query(SessionModel)
+        .options(selectinload(SessionModel.conference))
+        .all()
+    )
+    return sessions
 @router.get("", response_model=List[SessionResponse])
 async def list_sessions(
     status: str = None,

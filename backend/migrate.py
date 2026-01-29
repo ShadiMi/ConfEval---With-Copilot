@@ -117,10 +117,26 @@ try:
             updated_at TIMESTAMP
         )
     ''')
+    
     print('✓ Created/verified conferences table')
 except sqlite3.OperationalError as e:
     print(f'✗ Error with conferences: {e}')
+# ✅ Add new columns to conferences table (building / floor / room_number)
+conference_cols_to_add = [
+    ('building', 'VARCHAR(50)'),
+    ('floor', 'INTEGER'),
+    ('room_number', 'INTEGER'),
+]
 
+for col_name, col_type in conference_cols_to_add:
+    try:
+        cursor.execute(f'ALTER TABLE conferences ADD COLUMN {col_name} {col_type}')
+        print(f'✓ Added {col_name} column to conferences')
+    except sqlite3.OperationalError as e:
+        if 'duplicate column name' in str(e):
+            print(f'  conferences.{col_name} column already exists')
+        else:
+            print(f'✗ Error adding conferences.{col_name}: {e}')
 # Add conference_id column to sessions table
 try:
     cursor.execute('ALTER TABLE sessions ADD COLUMN conference_id INTEGER REFERENCES conferences(id) ON DELETE SET NULL')
