@@ -14,13 +14,13 @@ import { useAuthStore } from '@/lib/store';
 import { formatDate } from '@/lib/utils';
 import { Conference, ReviewerApplication, Session } from '@/types';
 import {
-    Calendar,
-    Clock,
-    Layers,
-    MapPin,
-    Plus,
-    Send,
-    Users,
+  Calendar,
+  Clock,
+  Layers,
+  MapPin,
+  Plus,
+  Send,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -189,7 +189,10 @@ export default function SessionsPage() {
                 {getConferenceName(session.conference_id) && (
                   <div className="flex items-center gap-2 mb-3">
                     <Layers className="w-4 h-4 text-primary-500" />
-                    <Link 
+
+                    <span className="text-sm text-slate-500">Conference:</span>
+
+                    <Link
                       href={`/conferences/${session.conference_id}`}
                       className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
                     >
