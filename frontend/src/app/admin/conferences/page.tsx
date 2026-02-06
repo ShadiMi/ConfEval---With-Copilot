@@ -259,13 +259,13 @@ export default function ConferencesPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'success' | 'warning' | 'error'> = {
-      draft: 'default',
+    const variants: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'gray'> = {
+      draft: 'gray',
       active: 'success',
       completed: 'warning',
-      archived: 'error',
+      archived: 'danger',
     };
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
+    return <Badge variant={variants[status] || 'gray'}>{status}</Badge>;
   };
 
   const unassignedSessions = sessions.filter((s) => !s.conference_id);
@@ -368,17 +368,17 @@ export default function ConferencesPage() {
                   {/* Status Actions */}
                   <div className="flex flex-wrap gap-1 mt-3">
                     {conference.status === 'draft' && (
-                      <Button size="sm" variant="outline" onClick={() => handleStatusChange(conference.id, 'active')}>
+                      <Button size="sm" variant="secondary" onClick={() => handleStatusChange(conference.id, 'active')}>
                         Activate
                       </Button>
                     )}
                     {conference.status === 'active' && (
-                      <Button size="sm" variant="outline" onClick={() => handleStatusChange(conference.id, 'completed')}>
+                      <Button size="sm" variant="secondary" onClick={() => handleStatusChange(conference.id, 'completed')}>
                         Complete
                       </Button>
                     )}
                     {conference.status === 'completed' && (
-                      <Button size="sm" variant="outline" onClick={() => handleStatusChange(conference.id, 'archived')}>
+                      <Button size="sm" variant="secondary" onClick={() => handleStatusChange(conference.id, 'archived')}>
                         Archive
                       </Button>
                     )}
@@ -509,13 +509,10 @@ export default function ConferencesPage() {
           />
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowCreateModal(false);
-                resetForm();
-              }}
-            >
+            <Button variant="secondary" onClick={() => {
+              setShowCreateModal(false);
+              resetForm();
+            }}>
               Cancel
             </Button>
             <Button onClick={handleCreate} disabled={!formData.name || !formData.start_date || !formData.end_date}>
@@ -644,13 +641,10 @@ export default function ConferencesPage() {
           />
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowEditModal(false);
-                resetForm();
-              }}
-            >
+            <Button variant="secondary" onClick={() => {
+              setShowEditModal(false);
+              resetForm();
+            }}>
               Cancel
             </Button>
             <Button onClick={handleUpdate}>Update Conference</Button>
@@ -776,7 +770,7 @@ export default function ConferencesPage() {
             </div>
           )}
           <div className="flex justify-end pt-4">
-            <Button variant="outline" onClick={() => setShowAddSessionModal(false)}>
+            <Button variant="secondary" onClick={() => setShowAddSessionModal(false)}>
               Close
             </Button>
           </div>
