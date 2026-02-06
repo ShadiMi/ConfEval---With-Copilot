@@ -37,13 +37,13 @@ export default function ConferencesListPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'success' | 'warning' | 'error'> = {
-      draft: 'default',
+    const variants: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'gray'> = {
+      draft: 'gray',
       active: 'success',
       completed: 'warning',
-      archived: 'error',
+      archived: 'danger',
     };
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
+    return <Badge variant={variants[status] || 'gray'}>{status}</Badge>;
   };
 
   if (loading) {
@@ -104,7 +104,7 @@ export default function ConferencesListPage() {
                   </div>
                   
                   <Link href={`/conferences/${conference.id}`}>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="secondary" className="w-full">
                       View Details
                       <ChevronRight className="w-4 h-4 ml-2" />
                     </Button>

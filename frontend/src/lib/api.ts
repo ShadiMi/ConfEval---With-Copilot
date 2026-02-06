@@ -123,6 +123,7 @@ export const sessionsApi = {
   create: (data: {
     name: string;
     description?: string;
+    conference_id?: number;
     start_date: string;
     end_date: string;
     location?: string;
@@ -162,6 +163,8 @@ export const projectsApi = {
     description?: string;
     session_id?: number;
     tag_ids?: number[];
+    team_member_emails?: string[];
+    mentor_email?: string;
   }) => api.post('/projects', data),
   
   update: (id: number, data: any) => api.put(`/projects/${id}`, data),
