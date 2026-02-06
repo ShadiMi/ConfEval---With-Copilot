@@ -7,7 +7,7 @@ import { Card, CardBody } from '@/components/ui/Card';
 import { sessionsApi, statsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { formatDate } from '@/lib/utils';
-import { Session } from '@/types';
+import { SessionWithDetails } from '@/types';
 import {
     ArrowRight,
     Award,
@@ -36,7 +36,7 @@ import { useEffect, useState } from 'react';
 
 export default function HomePage() {
   const { isAuthenticated, user } = useAuthStore();
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<SessionWithDetails[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
