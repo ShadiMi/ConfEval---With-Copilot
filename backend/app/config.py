@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import SettingsConfigDict, BaseSettings
 from functools import lru_cache
 import secrets
 
@@ -7,8 +7,8 @@ class Settings(BaseSettings):
     APP_NAME: str = "ConfEval - Conference Review System"
     DEBUG: bool = True
     
-    # Database
-    DATABASE_URL: str = "sqlite:///./confeval.db"
+    # Database (use PostgreSQL in production, SQLite for local dev)
+    DATABASE_URL: str = "postgresql://confeval_user:shadi@localhost:5432/confeval"
     
     # Security
     SECRET_KEY: str = secrets.token_urlsafe(32)
@@ -26,9 +26,7 @@ class Settings(BaseSettings):
     
     # CORS
     CORS_ORIGINS: list = ["http://localhost:3000", "http://127.0.0.1:3000"]
-    
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 @lru_cache()

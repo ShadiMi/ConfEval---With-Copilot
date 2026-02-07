@@ -5,11 +5,7 @@ from typing import List, Optional
 from app.database import get_db
 from app.models import Conference, Session as SessionModel, User, UserRole, ConferenceStatus
 from app.schemas import (
-    ConferenceCreate,
-    ConferenceUpdate,
-    ConferenceResponse,
-    ConferenceWithSessions,
-    SessionResponse,
+    ConferenceCreate, ConferenceUpdate, ConferenceResponse, ConferenceWithSessions, SessionResponse
 )
 from app.auth import get_current_user, require_admin
 
@@ -281,13 +277,8 @@ async def get_conference_sessions(
     db: Session = Depends(get_db),
 ):
     """Get all sessions for a conference"""
-
-    conference = (
-        db.query(Conference)
-        .options(selectinload(Conference.sessions))
-        .filter(Conference.id == conference_id)
-        .first()
-    )
+    conference = db.query(Conference).filter(Conference.id == conference_id).first()
+    
     if not conference:
         raise HTTPException(status_code=404, detail="Conference not found")
 

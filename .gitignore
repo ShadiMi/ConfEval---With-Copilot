@@ -6,15 +6,40 @@
 **/.env.production
 .env
 .env.*
+!.env.example
+
+# Secrets and credentials
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+credentials/
+*.credentials
+*.secret
 
 # Database files
 *.db
 *.sqlite
 *.sqlite3
+*.sql
+!migrations/*.sql
+
+# Database dumps and backups
+backup.sql
+*.dump
+*.bak
 
 # Uploads (user-generated content)
 /uploads/
 **/uploads/
+!uploads/.gitkeep
+
+# Docker volumes data
+postgres_data/
+mysql_data/
+redis_data/
 
 # Python
 __pycache__/
@@ -71,3 +96,6 @@ ehthumbs.db
 *.tmp
 *.temp
 .cache/
+
+# SSL/TLS certificates (nginx)
+nginx/ssl/
