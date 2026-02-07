@@ -92,6 +92,9 @@ export interface Conference {
   start_date: string;
   end_date: string;
   location?: string;
+  building?: string;
+  floor?: number;
+  room_number?: number;
   status: ConferenceStatus;
   max_sessions: number;
   created_at: string;
@@ -108,6 +111,22 @@ export interface ConferenceCreate {
   start_date: string;
   end_date: string;
   location?: string;
+  building?: string;
+  floor?: number;
+  room_number?: number;
+  max_sessions?: number;
+}
+
+export interface ConferenceUpdate {
+  name?: string;
+  description?: string;
+  start_date?: string;
+  end_date?: string;
+  location?: string;
+  building?: string;
+  floor?: number;
+  room_number?: number;
+  status?: ConferenceStatus;
   max_sessions?: number;
 }
 

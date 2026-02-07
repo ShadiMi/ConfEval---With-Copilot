@@ -11,6 +11,9 @@ WORKDIR /app
 # Install libc6-compat for Alpine compatibility
 RUN apk add --no-cache libc6-compat
 
+# Upgrade npm to 11.9.0
+RUN npm install -g npm@11.9.0
+
 # Copy package files
 COPY package.json package-lock.json ./
 
@@ -23,6 +26,9 @@ RUN npm ci
 FROM node:22-alpine AS builder
 
 WORKDIR /app
+
+# Upgrade npm to 11.9.0
+RUN npm install -g npm@11.9.0
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -53,6 +59,9 @@ ENV HOSTNAME="0.0.0.0"
 
 # Install libc6-compat for runtime
 RUN apk add --no-cache libc6-compat
+
+# Upgrade npm to 11.9.0
+RUN npm install -g npm@11.9.0
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \

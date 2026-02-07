@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import field_validator, ConfigDict, BaseModel, EmailStr, Field, validator
 from typing import Optional, List
 from datetime import datetime
 from app.models import UserRole, ProjectStatus, SessionStatus, ApplicationStatus, NotificationType, TeamInvitationStatus, ConferenceStatus
@@ -17,7 +17,8 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, max_length=100)
     
-    @validator('password')
+    @field_validator('password')
+    @classmethod
     def validate_password(cls, v):
         if not any(c.isupper() for c in v):
             raise ValueError('Password must contain at least one uppercase letter')
@@ -42,16 +43,12 @@ class UserResponse(UserBase):
     cv_path: Optional[str] = None
     google_id: Optional[str] = None
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserWithTags(UserResponse):
     interested_tags: List["TagResponse"] = []
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Auth Schemas
@@ -82,9 +79,7 @@ class TagCreate(TagBase):
 
 class TagResponse(TagBase):
     id: int
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Session Schemas
@@ -117,9 +112,7 @@ class SessionResponse(SessionBase):
     status: SessionStatus
     conference_id: Optional[int] = None
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SessionWithDetails(SessionResponse):
@@ -127,9 +120,7 @@ class SessionWithDetails(SessionResponse):
     reviewers: List[UserResponse] = []
     tags: List["TagResponse"] = []
     project_count: int = 0
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Project Schemas
@@ -144,7 +135,8 @@ class ProjectCreate(ProjectBase):
     team_member_emails: List[EmailStr] = []  # Up to 2 additional team members
     mentor_email: Optional[EmailStr] = None
     
-    @validator('team_member_emails')
+    @field_validator('team_member_emails')
+    @classmethod
     def validate_team_members(cls, v):
         if len(v) > 2:
             raise ValueError('Maximum 2 additional team members allowed')
@@ -177,9 +169,7 @@ class TeamInvitationResponse(BaseModel):
     email: str
     status: TeamInvitationStatus
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectResponse(ProjectBase):
@@ -198,18 +188,14 @@ class ProjectResponse(ProjectBase):
     pending_invitations: List[TeamInvitationResponse] = []
     avg_score: Optional[float] = None
     review_count: int = 0
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProjectWithStudent(ProjectResponse):
     student: UserResponse
     assigned_reviewers: List[UserResponse] = []
     session: Optional[SessionResponse] = None
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Criteria Schemas
@@ -236,9 +222,7 @@ class CriteriaUpdate(BaseModel):
 class CriteriaResponse(CriteriaBase):
     id: int
     session_id: int
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Review Schemas
@@ -264,9 +248,7 @@ class CriteriaScoreResponse(BaseModel):
     criteria_id: int
     score: float
     criteria: CriteriaResponse
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ReviewResponse(BaseModel):
@@ -279,9 +261,7 @@ class ReviewResponse(BaseModel):
     created_at: datetime
     criteria_scores: List[CriteriaScoreResponse] = []
     reviewer: UserResponse
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Application Schemas
@@ -303,9 +283,7 @@ class ApplicationResponse(BaseModel):
     created_at: datetime
     reviewer: UserResponse
     session: SessionResponse
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Notification Schemas
@@ -326,9 +304,7 @@ class NotificationResponse(BaseModel):
     link: Optional[str] = None
     is_read: bool
     created_at: datetime
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 ALLOWED_BUILDINGS = {"לגסי", "אינשטיין", "ספרא", "מינקוף", "קציר", "שמעון"}
 
@@ -354,7 +330,8 @@ class ConferenceBase(BaseModel):
     location: Optional[str] = None
     max_sessions: int = Field(default=10, ge=1, le=100)
 
-    @validator("building")
+    @field_validator("building")
+    @classmethod
     def validate_building(cls, v):
         if v is None:
             return v
@@ -362,7 +339,8 @@ class ConferenceBase(BaseModel):
             raise ValueError(f"Invalid building. Allowed: {sorted(ALLOWED_BUILDINGS)}")
         return v
 
-    @validator("floor")
+    @field_validator("floor")
+    @classmethod
     def validate_floor(cls, v):
         if v is None:
             return v
@@ -370,6 +348,8 @@ class ConferenceBase(BaseModel):
             raise ValueError("floor must be 1 or 2")
         return v
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator("room_number")
     def validate_room_number(cls, room, values):
         floor = values.get("floor")
@@ -402,7 +382,8 @@ class ConferenceUpdate(BaseModel):
     floor: Optional[int] = None
     room_number: Optional[int] = None
 
-    @validator("building")
+    @field_validator("building")
+    @classmethod
     def validate_building(cls, v):
         if v is None:
             return v
@@ -410,7 +391,8 @@ class ConferenceUpdate(BaseModel):
             raise ValueError(f"Invalid building. Allowed: {sorted(ALLOWED_BUILDINGS)}")
         return v
 
-    @validator("floor")
+    @field_validator("floor")
+    @classmethod
     def validate_floor(cls, v):
         if v is None:
             return v
@@ -418,6 +400,8 @@ class ConferenceUpdate(BaseModel):
             raise ValueError("floor must be 1 or 2")
         return v
 
+    # TODO[pydantic]: We couldn't refactor the `validator`, please replace it by `field_validator` manually.
+    # Check https://docs.pydantic.dev/dev-v2/migration/#changes-to-validators for more information.
     @validator("room_number")
     def validate_room_number(cls, room, values):
         floor = values.get("floor")
@@ -435,10 +419,10 @@ class ConferenceResponse(ConferenceBase):
     status: ConferenceStatus
     # created_at: datetime
     name: str
-    description: Optional[str]
+    description: Optional[str] = None
     start_date: datetime
     end_date: datetime
-    location: Optional[str]
+    location: Optional[str] = None
     status: str
     max_sessions: int
 
@@ -446,17 +430,13 @@ class ConferenceResponse(ConferenceBase):
     building: Optional[str] = None
     floor: Optional[int] = None
     room_number: Optional[int] = None
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ConferenceWithSessions(ConferenceResponse):
     sessions: List[SessionResponse] = []
     session_count: int = 0
-    
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Update forward references

@@ -402,6 +402,9 @@ export const conferencesApi = {
     start_date: string;
     end_date: string;
     location?: string;
+    building?: string;
+    floor?: number;
+    room_number?: number;
     max_sessions?: number;
   }) => api.post('/conferences', data),
   
@@ -411,6 +414,9 @@ export const conferencesApi = {
     start_date?: string;
     end_date?: string;
     location?: string;
+    building?: string;
+    floor?: number;
+    room_number?: number;
     status?: string;
     max_sessions?: number;
   }) => api.put(`/conferences/${id}`, data),

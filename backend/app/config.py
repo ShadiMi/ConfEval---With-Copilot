@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import SettingsConfigDict, BaseSettings
 from functools import lru_cache
 import secrets
 
@@ -26,9 +26,7 @@ class Settings(BaseSettings):
     
     # CORS
     CORS_ORIGINS: list = ["http://localhost:3000", "http://127.0.0.1:3000"]
-    
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 @lru_cache()
