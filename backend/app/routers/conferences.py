@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from app.database import get_db
 from app.models import Conference, Session as SessionModel, User, UserRole, ConferenceStatus
 from app.schemas import (
-    ConferenceCreate, ConferenceUpdate, ConferenceResponse, ConferenceWithSessions
+    ConferenceCreate, ConferenceUpdate, ConferenceResponse, ConferenceWithSessions, SessionResponse
 )
 from app.auth import get_current_user, require_admin
 
@@ -167,15 +167,13 @@ async def delete_conference(
     return None
 
 
-@router.get("/{conference_id}/sessions", response_model=List["SessionResponse"])
+@router.get("/{conference_id}/sessions", response_model=List[SessionResponse])
 async def get_conference_sessions(
     conference_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """Get all sessions for a conference"""
-    from app.schemas import SessionResponse
-    
     conference = db.query(Conference).filter(Conference.id == conference_id).first()
     
     if not conference:
