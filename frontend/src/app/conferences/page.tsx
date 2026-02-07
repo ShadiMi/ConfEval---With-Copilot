@@ -1,21 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardBody } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
 import { conferencesApi } from '@/lib/api';
-import { Conference, ConferenceWithSessions } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { Conference } from '@/types';
 import {
-  Calendar,
-  MapPin,
-  Layers,
-  ArrowRight,
-  ChevronRight,
+    Calendar,
+    ChevronRight,
+    Layers,
+    MapPin
 } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
 
 export default function ConferencesListPage() {
   const [conferences, setConferences] = useState<Conference[]>([]);
@@ -37,13 +36,13 @@ export default function ConferencesListPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'success' | 'warning' | 'error'> = {
-      draft: 'default',
+    const variants: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'gray'> = {
+      draft: 'gray',
       active: 'success',
       completed: 'warning',
-      archived: 'error',
+      archived: 'danger',
     };
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
+    return <Badge variant={variants[status] || 'gray'}>{status}</Badge>;
   };
 
   if (loading) {
@@ -104,7 +103,7 @@ export default function ConferencesListPage() {
                   </div>
                   
                   <Link href={`/conferences/${conference.id}`}>
-                    <Button variant="outline" className="w-full">
+                    <Button variant="secondary" className="w-full">
                       View Details
                       <ChevronRight className="w-4 h-4 ml-2" />
                     </Button>

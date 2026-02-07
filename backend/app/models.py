@@ -152,6 +152,10 @@ class Conference(Base):
     description = Column(Text, nullable=True)
     start_date = Column(DateTime(timezone=True), nullable=False)
     end_date = Column(DateTime(timezone=True), nullable=False)
+    building = Column(String(50), nullable=True)      # ספרא, לגסי, ...
+    floor = Column(Integer, nullable=True)            # 1 or 2
+    room_number = Column(Integer, nullable=True)      # 101..109
+
     location = Column(String(255), nullable=True)
     status = Column(String(50), default=ConferenceStatus.DRAFT)
     max_sessions = Column(Integer, default=10)

@@ -330,6 +330,15 @@ class NotificationResponse(BaseModel):
     class Config:
         from_attributes = True
 
+ALLOWED_BUILDINGS = {"לגסי", "אינשטיין", "ספרא", "מינקוף", "קציר", "שמעון"}
+
+
+def allowed_rooms_for_floor(floor: int):
+    if floor == 1:
+        return list(range(101, 110))  # 101..109
+    if floor == 2:
+        return list(range(201, 210))  # 201..209
+    return []
 
 # Conference Schemas
 class ConferenceBase(BaseModel):
@@ -337,28 +346,106 @@ class ConferenceBase(BaseModel):
     description: Optional[str] = None
     start_date: datetime
     end_date: datetime
+
+    building: Optional[str] = None
+    floor: Optional[int] = None
+    room_number: Optional[int] = None
+
     location: Optional[str] = None
     max_sessions: int = Field(default=10, ge=1, le=100)
+
+    @validator("building")
+    def validate_building(cls, v):
+        if v is None:
+            return v
+        if v not in ALLOWED_BUILDINGS:
+            raise ValueError(f"Invalid building. Allowed: {sorted(ALLOWED_BUILDINGS)}")
+        return v
+
+    @validator("floor")
+    def validate_floor(cls, v):
+        if v is None:
+            return v
+        if v not in (1, 2):
+            raise ValueError("floor must be 1 or 2")
+        return v
+
+    @validator("room_number")
+    def validate_room_number(cls, room, values):
+        floor = values.get("floor")
+        if room is None or floor is None:
+            return room
+
+        allowed = allowed_rooms_for_floor(int(floor))
+        if room not in allowed:
+            raise ValueError(f"For floor {floor}, room_number must be one of: {allowed}")
+        return room
+
+
 
 
 class ConferenceCreate(ConferenceBase):
     pass
-
 
 class ConferenceUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
+
+    
+
     location: Optional[str] = None
     status: Optional[ConferenceStatus] = None
     max_sessions: Optional[int] = Field(None, ge=1, le=100)
+    building: Optional[str] = None
+    floor: Optional[int] = None
+    room_number: Optional[int] = None
+
+    @validator("building")
+    def validate_building(cls, v):
+        if v is None:
+            return v
+        if v not in ALLOWED_BUILDINGS:
+            raise ValueError(f"Invalid building. Allowed: {sorted(ALLOWED_BUILDINGS)}")
+        return v
+
+    @validator("floor")
+    def validate_floor(cls, v):
+        if v is None:
+            return v
+        if v not in (1, 2):
+            raise ValueError("floor must be 1 or 2")
+        return v
+
+    @validator("room_number")
+    def validate_room_number(cls, room, values):
+        floor = values.get("floor")
+        if room is None or floor is None:
+            return room
+
+        allowed = allowed_rooms_for_floor(int(floor))
+        if room not in allowed:
+            raise ValueError(f"For floor {floor}, room_number must be one of: {allowed}")
+        return room
 
 
 class ConferenceResponse(ConferenceBase):
     id: int
     status: ConferenceStatus
-    created_at: datetime
+    # created_at: datetime
+    name: str
+    description: Optional[str]
+    start_date: datetime
+    end_date: datetime
+    location: Optional[str]
+    status: str
+    max_sessions: int
+
+    # ✅ add these so edit modal can load them
+    building: Optional[str] = None
+    floor: Optional[int] = None
+    room_number: Optional[int] = None
     
     class Config:
         from_attributes = True

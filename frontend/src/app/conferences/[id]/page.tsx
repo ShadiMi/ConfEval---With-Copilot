@@ -1,23 +1,23 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
+import { Card, CardBody } from '@/components/ui/Card';
 import { conferencesApi } from '@/lib/api';
-import { ConferenceWithSessions } from '@/types';
 import { formatDate } from '@/lib/utils';
+import { ConferenceWithSessions } from '@/types';
 import {
-  Calendar,
-  MapPin,
-  Layers,
-  ArrowLeft,
-  Clock,
-  Users,
+    ArrowLeft,
+    Calendar,
+    Clock,
+    Layers,
+    MapPin,
+    Users,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function ConferenceDetailsPage() {
   const params = useParams();
@@ -43,14 +43,14 @@ export default function ConferenceDetailsPage() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, 'default' | 'success' | 'warning' | 'error'> = {
-      draft: 'default',
+    const variants: Record<string, 'primary' | 'success' | 'warning' | 'danger' | 'gray'> = {
+      draft: 'gray',
       active: 'success',
       completed: 'warning',
-      archived: 'error',
-      upcoming: 'default',
+      archived: 'danger',
+      upcoming: 'gray',
     };
-    return <Badge variant={variants[status] || 'default'}>{status}</Badge>;
+    return <Badge variant={variants[status] || 'gray'}>{status}</Badge>;
   };
 
   if (loading) {
@@ -70,7 +70,7 @@ export default function ConferenceDetailsPage() {
           <Layers className="w-12 h-12 mx-auto text-slate-400 mb-4" />
           <h3 className="text-lg font-medium text-slate-900 mb-2">Conference not found</h3>
           <Link href="/conferences">
-            <Button variant="outline">
+            <Button variant="secondary">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back to Conferences
             </Button>
@@ -192,7 +192,7 @@ export default function ConferenceDetailsPage() {
                     
                     <div className="mt-4">
                       <Link href={`/sessions/${session.id}`}>
-                        <Button variant="outline" size="sm" className="w-full">
+                        <Button variant="secondary" size="sm" className="w-full">
                           View Session Details
                         </Button>
                       </Link>
