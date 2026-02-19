@@ -47,8 +47,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        # CRITICAL: This must be the PUBLIC IP of your Ubuntu server
-        NEXT_PUBLIC_API_URL: http://${SERVER_IP}:8000/api
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
     container_name: confeval-frontend
     restart: unless-stopped
     ports:
