@@ -57,7 +57,11 @@ export default function RegisterPage() {
         window.google.accounts.id.initialize({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
           callback: handleGoogleCallback,
+          prompt_parent_id: 'google-signup-button',
+          use_fedcm_for_prompt: false,
         });
+        // Disable auto-select to force account chooser
+        window.google.accounts.id.disableAutoSelect();
         window.google.accounts.id.renderButton(
           document.getElementById('google-signup-button'),
           { theme: 'outline', size: 'large', width: '100%', text: 'signup_with' }
