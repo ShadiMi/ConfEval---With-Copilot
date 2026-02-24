@@ -40,7 +40,11 @@ export default function LoginPage() {
         window.google.accounts.id.initialize({
           client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
           callback: handleGoogleCallback,
+          prompt_parent_id: 'google-signin-button',
+          use_fedcm_for_prompt: false,
         });
+        // Disable auto-select to force account chooser
+        window.google.accounts.id.disableAutoSelect();
         window.google.accounts.id.renderButton(
           document.getElementById('google-signin-button'),
           { theme: 'outline', size: 'large', width: '100%', text: 'signin_with' }
@@ -185,10 +189,6 @@ export default function LoginPage() {
             </div>
           </div>
         </div>
-
-        <p className="mt-4 text-center text-xs text-slate-500">
-          Default admin: admin@confeval.local / Admin123!
-        </p>
       </div>
     </div>
   );
