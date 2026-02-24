@@ -511,10 +511,31 @@ export default function SessionDetailPage() {
     <DashboardLayout>
       {/* Header */}
       <div className="mb-6">
-        <Link href="/sessions" className="text-primary-600 hover:text-primary-700 text-sm flex items-center mb-4">
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to Sessions
-        </Link>
+        <div className="flex items-center gap-2 text-sm mb-4">
+          {conference ? (
+            <>
+              <Link href="/conferences" className="text-slate-500 hover:text-slate-700">
+                Conferences
+              </Link>
+              <span className="text-slate-400">/</span>
+              <Link 
+                href={`/conferences/${conference.id}`}
+                className="text-primary-600 hover:text-primary-700 font-medium"
+              >
+                {conference.name}
+              </Link>
+              <span className="text-slate-400">/</span>
+              <span className="text-slate-700 font-medium">{session.name}</span>
+            </>
+          ) : (
+            <>
+              <Link href="/sessions" className="text-primary-600 hover:text-primary-700 flex items-center">
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Back to Sessions
+              </Link>
+            </>
+          )}
+        </div>
         
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -525,10 +546,10 @@ export default function SessionDetailPage() {
             {conference && (
               <Link 
                 href={`/conferences/${conference.id}`}
-                className="flex items-center gap-2 mt-2 text-primary-600 hover:text-primary-700 hover:underline"
+                className="inline-flex items-center gap-2 mt-2 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors"
               >
                 <Layers className="w-4 h-4" />
-                <span className="font-medium">{conference.name}</span>
+                Part of {conference.name}
               </Link>
             )}
             {session.description && (

@@ -7,7 +7,6 @@ import { Notification } from '@/types';
 import {
   BarChart3,
   Bell,
-  Calendar,
   ChevronDown,
   ClipboardList,
   FileCheck,
@@ -51,11 +50,6 @@ const navItems: NavItem[] = [
     href: '/projects',
     icon: FolderKanban,
     roles: ['student'],
-  },
-  {
-    label: 'Sessions',
-    href: '/sessions',
-    icon: Calendar,
   },
   {
     label: 'Conferences',

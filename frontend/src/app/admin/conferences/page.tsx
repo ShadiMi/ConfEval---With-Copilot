@@ -11,15 +11,15 @@ import { conferencesApi, sessionsApi } from '@/lib/api';
 import { extractErrorMessage, formatDate } from '@/lib/utils'; // ✅ ADD extractErrorMessage
 import { Conference, ConferenceWithSessions, Session } from '@/types';
 import {
-  Calendar,
-  Edit,
-  Eye,
-  Layers,
-  LinkIcon,
-  MapPin,
-  Plus,
-  Trash2,
-  X,
+    Calendar,
+    Edit,
+    Eye,
+    Layers,
+    LinkIcon,
+    MapPin,
+    Plus,
+    Trash2,
+    X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
@@ -41,6 +41,15 @@ export default function ConferencesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showAddSessionModal, setShowAddSessionModal] = useState(false);
+  const [showCreateSessionModal, setShowCreateSessionModal] = useState(false);
+  const [sessionForm, setSessionForm] = useState({
+    name: '',
+    description: '',
+    start_date: '',
+    end_date: '',
+    location: '',
+    max_projects: 50,
+  });
 
   const [selectedConference, setSelectedConference] =
     useState<ConferenceWithSessions | null>(null);
@@ -208,6 +217,33 @@ export default function ConferencesPage() {
       loadSessions();
     } catch (error: any) {
       toast.error(extractErrorMessage(error, 'Failed to add session'));
+    }
+  };
+
+  const handleCreateSession = async () => {
+    if (!selectedConference) return;
+    try {
+      await sessionsApi.create({
+        ...sessionForm,
+        start_date: new Date(sessionForm.start_date).toISOString(),
+        end_date: new Date(sessionForm.end_date).toISOString(),
+        conference_id: selectedConference.id,
+      });
+      toast.success('Session created successfully');
+      setShowCreateSessionModal(false);
+      setSessionForm({
+        name: '',
+        description: '',
+        start_date: '',
+        end_date: '',
+        location: '',
+        max_projects: 50,
+      });
+      const res = await conferencesApi.get(selectedConference.id);
+      setSelectedConference(res.data);
+      loadSessions();
+    } catch (error: any) {
+      toast.error(extractErrorMessage(error, 'Failed to create session'));
     }
   };
 
@@ -699,13 +735,20 @@ export default function ConferencesPage() {
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-semibold text-slate-900">Sessions</h4>
-                {(selectedConference.session_count || 0) < selectedConference.max_sessions &&
-                  unassignedSessions.length > 0 && (
-                    <Button size="sm" onClick={() => setShowAddSessionModal(true)}>
-                      <LinkIcon className="w-4 h-4 mr-1" />
-                      Add Session
+                {(selectedConference.session_count || 0) < selectedConference.max_sessions && (
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => setShowCreateSessionModal(true)}>
+                      <Plus className="w-4 h-4 mr-1" />
+                      Create Session
                     </Button>
-                  )}
+                    {unassignedSessions.length > 0 && (
+                      <Button size="sm" variant="secondary" onClick={() => setShowAddSessionModal(true)}>
+                        <LinkIcon className="w-4 h-4 mr-1" />
+                        Add Existing
+                      </Button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {!selectedConference.sessions || selectedConference.sessions.length === 0 ? (
@@ -772,6 +815,77 @@ export default function ConferencesPage() {
           <div className="flex justify-end pt-4">
             <Button variant="secondary" onClick={() => setShowAddSessionModal(false)}>
               Close
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Create Session Modal */}
+      <Modal
+        isOpen={showCreateSessionModal}
+        onClose={() => setShowCreateSessionModal(false)}
+        title="Create New Session"
+        size="lg"
+      >
+        <div className="space-y-4">
+          <div className="bg-primary-50 border border-primary-100 rounded-lg p-3 mb-4">
+            <p className="text-sm text-primary-700">
+              <Layers className="w-4 h-4 inline mr-2" />
+              This session will be automatically linked to <strong>{selectedConference?.name}</strong>
+            </p>
+          </div>
+          
+          <Input
+            label="Session Name"
+            placeholder="e.g., Morning Presentations"
+            value={sessionForm.name}
+            onChange={(e) => setSessionForm({ ...sessionForm, name: e.target.value })}
+            required
+          />
+          <Textarea
+            label="Description"
+            placeholder="Describe the session..."
+            value={sessionForm.description}
+            onChange={(e) => setSessionForm({ ...sessionForm, description: e.target.value })}
+            rows={3}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              type="datetime-local"
+              label="Start Date & Time"
+              value={sessionForm.start_date}
+              onChange={(e) => setSessionForm({ ...sessionForm, start_date: e.target.value })}
+              required
+            />
+            <Input
+              type="datetime-local"
+              label="End Date & Time"
+              value={sessionForm.end_date}
+              onChange={(e) => setSessionForm({ ...sessionForm, end_date: e.target.value })}
+              required
+            />
+          </div>
+          <Input
+            label="Location"
+            placeholder="e.g., Room 101, Building A"
+            value={sessionForm.location}
+            onChange={(e) => setSessionForm({ ...sessionForm, location: e.target.value })}
+          />
+          <Input
+            type="number"
+            label="Maximum Projects"
+            value={sessionForm.max_projects}
+            onChange={(e) => setSessionForm({ ...sessionForm, max_projects: parseInt(e.target.value) || 50 })}
+            min={1}
+            required
+          />
+          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+            <Button variant="secondary" onClick={() => setShowCreateSessionModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateSession}>
+              <Plus className="w-4 h-4 mr-2" />
+              Create Session
             </Button>
           </div>
         </div>
