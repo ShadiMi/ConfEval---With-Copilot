@@ -27,7 +27,15 @@ import toast from 'react-hot-toast';
 
 const BUILDINGS = ['לגסי', 'אינשטיין', 'ספרא', 'מינקוף', 'קציר', 'שמעון'] as const;
 
-const roomsForFloor = (floor: '' | 1 | 2) => {
+const floorsForBuilding = (building: string): (number | string)[] => {
+  if (building === 'מינקוף') return [1]; // מינקוף has only 1 floor
+  if (building === 'קציר') return ['G-']; // קציר has only G floor
+  return [1, 2]; // Other buildings have 2 floors
+};
+
+const roomsForFloor = (building: string, floor: '' | 1 | 2 | 'G-'): (number | string)[] => {
+  if (building === 'מינקוף' && floor === 1) return [104, 105, 106]; // מינקוף specific rooms
+  if (building === 'קציר' && floor === 'G-') return ['G-07', 'G-08', 'G-09']; // קציר specific rooms
   if (floor === 1) return Array.from({ length: 9 }, (_, i) => 101 + i);
   if (floor === 2) return Array.from({ length: 9 }, (_, i) => 201 + i);
   return [];
@@ -64,8 +72,8 @@ export default function ConferencesPage() {
     location: string;
     max_sessions: number;
     building: string;
-    floor: '' | 1 | 2;
-    room_number: '' | number;
+    floor: '' | 1 | 2 | 'G-';
+    room_number: '' | number | string;
   }>({
     name: '',
     description: '',
@@ -82,6 +90,10 @@ export default function ConferencesPage() {
     loadConferences();
     loadSessions();
   }, []);
+
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, floor: '', room_number: '' }));
+  }, [formData.building]);
 
   useEffect(() => {
     setFormData((prev) => ({ ...prev, room_number: '' }));
@@ -144,6 +156,14 @@ export default function ConferencesPage() {
       return;
     }
 
+    // Check if building uses non-numeric floor/room (like קציר with G- floor)
+    const isNonStandardBuilding = formData.building === 'קציר';
+
+    // Compute location string for non-standard buildings
+    const computedLocation = hasAll
+      ? `${formData.building}, קומה ${formData.floor}, חדר ${formData.room_number}`
+      : undefined;
+
     try {
       await conferencesApi.update(selectedConference.id, {
         name: formData.name,
@@ -151,10 +171,11 @@ export default function ConferencesPage() {
         start_date: new Date(formData.start_date).toISOString(),
         end_date: new Date(formData.end_date).toISOString(),
         max_sessions: formData.max_sessions,
-        building: formData.building || undefined,
-        floor: formData.floor === '' ? undefined : formData.floor,
-        room_number: formData.room_number === '' ? undefined : Number(formData.room_number),
-        location: undefined,
+        // For non-standard buildings, only use location string
+        building: isNonStandardBuilding ? undefined : (formData.building || undefined),
+        floor: isNonStandardBuilding ? undefined : (formData.floor === '' ? undefined : formData.floor as number),
+        room_number: isNonStandardBuilding ? undefined : (formData.room_number === '' ? undefined : Number(formData.room_number)),
+        location: isNonStandardBuilding ? computedLocation : undefined,
       });
 
       toast.success('Conference updated successfully');
@@ -249,8 +270,8 @@ export default function ConferencesPage() {
       location: conference.location || '',
       max_sessions: conference.max_sessions,
       building: (conference as any).building || '',
-      floor: ((conference as any).floor ?? '') as '' | 1 | 2,
-      room_number: ((conference as any).room_number ?? '') as '' | number,
+      floor: ((conference as any).floor ?? '') as '' | 1 | 2 | 'G-',
+      room_number: ((conference as any).room_number ?? '') as '' | number | string,
     });
     setShowEditModal(true);
   };
@@ -616,20 +637,28 @@ export default function ConferencesPage() {
               <select
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 value={formData.floor}
-                onChange={(e) => setFormData({ ...formData, floor: (e.target.value ? Number(e.target.value) : '') as '' | 1 | 2 })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const floor = val === '' ? '' : val === 'G-' ? 'G-' : Number(val) as 1 | 2;
+                  setFormData({ ...formData, floor });
+                }}
+                disabled={!formData.building}
               >
                 <option value="">Floor</option>
-                <option value="1">Floor 1</option>
-                <option value="2">Floor 2</option>
+                {floorsForBuilding(formData.building).map((f) => <option key={String(f)} value={String(f)}>Floor {f}</option>)}
               </select>
               <select
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
                 value={formData.room_number}
-                onChange={(e) => setFormData({ ...formData, room_number: e.target.value ? Number(e.target.value) : '' })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const room = val === '' ? '' : (typeof val === 'string' && val.startsWith('G-')) ? val : Number(val);
+                  setFormData({ ...formData, room_number: room });
+                }}
                 disabled={!formData.floor}
               >
                 <option value="">Room</option>
-                {roomsForFloor(formData.floor).map((r) => <option key={r} value={r}>{r}</option>)}
+                {roomsForFloor(formData.building, formData.floor).map((r) => <option key={String(r)} value={String(r)}>{r}</option>)}
               </select>
             </div>
           </div>
@@ -708,20 +737,28 @@ export default function ConferencesPage() {
               <select
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                 value={formData.floor}
-                onChange={(e) => setFormData({ ...formData, floor: (e.target.value ? Number(e.target.value) : '') as '' | 1 | 2 })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const floor = val === '' ? '' : val === 'G-' ? 'G-' : Number(val) as 1 | 2;
+                  setFormData({ ...formData, floor });
+                }}
+                disabled={!formData.building}
               >
                 <option value="">Floor</option>
-                <option value="1">Floor 1</option>
-                <option value="2">Floor 2</option>
+                {floorsForBuilding(formData.building).map((f) => <option key={String(f)} value={String(f)}>Floor {f}</option>)}
               </select>
               <select
                 className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"
                 value={formData.room_number}
-                onChange={(e) => setFormData({ ...formData, room_number: e.target.value ? Number(e.target.value) : '' })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const room = val === '' ? '' : (typeof val === 'string' && val.startsWith('G-')) ? val : Number(val);
+                  setFormData({ ...formData, room_number: room });
+                }}
                 disabled={!formData.floor}
               >
                 <option value="">Room</option>
-                {roomsForFloor(formData.floor).map((r) => <option key={r} value={r}>{r}</option>)}
+                {roomsForFloor(formData.building, formData.floor).map((r) => <option key={String(r)} value={String(r)}>{r}</option>)}
               </select>
             </div>
           </div>
