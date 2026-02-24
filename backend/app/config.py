@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     # Database (use PostgreSQL in production, SQLite for local dev)
-    DATABASE_URL: str = "postgresql://confeval_user:shadi@localhost:5432/confeval"
+    # Use 'localhost' for local dev, 'db' for Docker
+    DATABASE_URL: str = "postgresql://confeval_user:Shadi2104@localhost:5432/confeval"
     
     # Security
     SECRET_KEY: str = secrets.token_urlsafe(32)
