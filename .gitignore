@@ -99,3 +99,6 @@ ehthumbs.db
 
 # SSL/TLS certificates (nginx)
 nginx/ssl/
+.env.example
+bandit_report.json
+.env.example

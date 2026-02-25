@@ -1,28 +1,65 @@
-# Development docker-compose override
-# Usage: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
-
-version: '3.8'
+# Development docker-compose (standalone)
+# Usage: docker compose -f docker-compose.dev.yml up --build
 
 services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: confeval-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: confeval
+      POSTGRES_USER: confeval_user
+      POSTGRES_PASSWORD: shadi
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U confeval_user -d confeval"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # FastAPI Backend
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    container_name: confeval-backend-dev
+    restart: unless-stopped
     volumes:
       - ./backend:/app
       - ./uploads:/app/uploads
     environment:
+      DATABASE_URL: postgresql://confeval_user:shadi@db:5432/confeval
+      SECRET_KEY: dev-secret-key-change-in-production
       DEBUG: "True"
+      CORS_ORIGINS: '["http://localhost:3000", "http://127.0.0.1:3000"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
     command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
+  # Next.js Frontend
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
+    container_name: confeval-frontend-dev
+    restart: unless-stopped
     volumes:
       - ./frontend:/app
       - /app/node_modules
       - /app/.next
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
-    command: npm run dev
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data_dev:
