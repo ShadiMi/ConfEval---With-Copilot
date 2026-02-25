@@ -5,7 +5,7 @@ services:
     container_name: confeval-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME}      # Changed from hardcoded 'confeval'
+      POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
