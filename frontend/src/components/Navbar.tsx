@@ -35,11 +35,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  {
-    label: 'Home',
-    href: '/',
-    icon: Home,
-  },
+
   {
     label: 'Dashboard',
     href: '/dashboard',

@@ -6,8 +6,8 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { useAuthStore } from '@/lib/store';
-import { statsApi, sessionsApi, projectsApi, applicationsApi, reviewsApi } from '@/lib/api';
-import { Session, Project, ReviewerApplication, Review, Stats } from '@/types';
+import { statsApi, sessionsApi, projectsApi, applicationsApi, reviewsApi, conferencesApi } from '@/lib/api';
+import { Session, Project, ReviewerApplication, Review, Stats, Conference } from '@/types';
 import { formatDate, getRoleLabel } from '@/lib/utils';
 import Link from 'next/link';
 import {
@@ -23,6 +23,7 @@ import {
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [conferences, setConferences] = useState<Conference[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [applications, setApplications] = useState<ReviewerApplication[]>([]);
@@ -38,13 +39,15 @@ export default function DashboardPage() {
     
     try {
       // Load data based on role
-      const [statsRes, sessionsRes] = await Promise.all([
+      const [statsRes, sessionsRes, conferencesRes] = await Promise.all([
         user.role === 'admin' ? statsApi.get() : Promise.resolve({ data: null }),
         sessionsApi.list(),
+        conferencesApi.list(),
       ]);
 
       setStats(statsRes.data);
       setSessions(sessionsRes.data.slice(0, 5));
+      setConferences(conferencesRes.data.slice(0, 5));
 
       if (user.role === 'student') {
         const projectsRes = await projectsApi.getMyProjects();
@@ -148,6 +151,47 @@ export default function DashboardPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Conferences */
+        <Card>
+          <CardHeader
+            action={
+              <Link href="/conferences">
+                <Button variant="ghost" size="sm">
+                  View All <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            }
+          >
+            <h2 className="text-lg font-semibold text-slate-900">
+              {user?.role === 'admin' ? 'Recent Conferences' : 'Available Conferences'}
+            </h2>
+          </CardHeader>
+          <CardBody className="p-0">
+            {conferences.length === 0 ? (
+              <div className="p-6 text-center text-slate-500">No conferences found</div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {conferences.map((conference) => (
+                  <Link
+                    key={conference.id}
+                    href={`/conferences/${conference.id}`}
+                    className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-900">{conference.name}</p>
+                      <p className="text-sm text-slate-500 flex items-center mt-1">
+                        <Clock className="w-4 h-4 mr-1" />
+                        {formatDate(conference.start_date)} - {formatDate(conference.end_date)}
+                      </p>
+                    </div>
+                    <Badge status={conference.status}>{conference.status}</Badge>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardBody>
+        </Card>
+        }
         {/* Sessions */}
         <Card>
           <CardHeader
