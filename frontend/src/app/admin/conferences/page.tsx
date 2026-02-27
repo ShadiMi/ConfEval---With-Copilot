@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
+import Link from 'next/link';
 
 const BUILDINGS = ['לגסי', 'אינשטיין', 'ספרא', 'מינקוף', 'קציר', 'שמעון'] as const;
 
@@ -345,6 +346,15 @@ export default function ConferencesPage() {
             <h1 className="text-3xl font-bold text-slate-900">Conferences</h1>
             <p className="text-slate-500 mt-1">Manage your conferences and their sessions</p>
           </div>
+          <div>
+          <Link href={`/sessions/`} className="flex-2">
+            <Button variant="secondary">
+            <Layers className="w-4 h-10 mr-4" />
+              Manage sessions
+              <ChevronRight className="w-1 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+            </Button>
+          </Link>
+          </div>
           <Button onClick={() => setShowCreateModal(true)} className="w-fit">
             <Plus className="w-5 h-5 mr-2" />
             New Conference
@@ -482,12 +492,15 @@ export default function ConferencesPage() {
                             conference.status === 'archived' ? 'bg-red-500' : 'bg-slate-300'
                           }`} />
                           <div>
-                            <h3 className="font-semibold text-slate-900 group-hover:text-primary-600 transition-colors">
-                              {conference.name}
-                            </h3>
+                            <Link href={`/conferences/${conference.id}`}
+                              className="font-semibold text-slate-900 group-hover:text-primary-600 transition-colors">
+                                {conference.name}
+                              
+                            
                             {conference.description && (
                               <p className="text-sm text-slate-500 line-clamp-1 max-w-xs">{conference.description}</p>
                             )}
+                            </Link>
                           </div>
                         </div>
                       </td>

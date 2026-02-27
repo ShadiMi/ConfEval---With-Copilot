@@ -229,7 +229,7 @@ export default function ConferencesListPage() {
               >
                 <CardBody className="space-y-4">
                   <div className="flex items-start justify-between">
-                    <h3 className="text-lg font-semibold text-slate-900">{conference.name}</h3>
+                    <Link href={`/conferences/${conference.id}`} className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors">{conference.name}</Link>
                     {getStatusBadge(conference.status)}
                   </div>
                   
