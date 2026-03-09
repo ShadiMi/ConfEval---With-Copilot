@@ -35,7 +35,7 @@ async def get_unread_count(
     """Get count of unread notifications"""
     count = db.query(Notification).filter(
         Notification.user_id == current_user.id,
-        Notification.is_read == False
+        Notification.is_read == False  # noqa: E712
     ).count()
     
     return {"unread_count": count}
@@ -74,7 +74,7 @@ async def mark_all_as_read(
     """Mark all notifications as read"""
     db.query(Notification).filter(
         Notification.user_id == current_user.id,
-        Notification.is_read == False
+        Notification.is_read == False  # noqa: E712
     ).update({"is_read": True})
     
     db.commit()

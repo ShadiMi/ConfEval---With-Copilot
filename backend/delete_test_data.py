@@ -37,27 +37,25 @@ def delete_test_data():
         test_criteria = db.query(Criteria).filter(Criteria.name.like(f"{TEST_PREFIX}%")).all()
         criteria_ids = [c.id for c in test_criteria]
         
-        test_tags = db.query(Tag).filter(Tag.name.like(f"{TEST_PREFIX}%")).all()
-        tag_ids = [t.id for t in test_tags]
+        db.query(Tag).filter(Tag.name.like(f"{TEST_PREFIX}%")).all()
         
-        test_conferences = db.query(Conference).filter(Conference.name.like(f"{TEST_PREFIX}%")).all()
-        conference_ids = [c.id for c in test_conferences]
+        db.query(Conference).filter(Conference.name.like(f"{TEST_PREFIX}%")).all()
         
         # Clear association tables first
         if project_ids:
             db.execute(text(f"DELETE FROM project_tags WHERE project_id IN ({','.join(map(str, project_ids))})"))
             db.execute(text(f"DELETE FROM project_reviewers WHERE project_id IN ({','.join(map(str, project_ids))})"))
             db.execute(text(f"DELETE FROM project_team_members WHERE project_id IN ({','.join(map(str, project_ids))})"))
-            print(f"  Cleared project association tables")
+            print("  Cleared project association tables")
         
         if session_ids:
             db.execute(text(f"DELETE FROM session_reviewers WHERE session_id IN ({','.join(map(str, session_ids))})"))
             db.execute(text(f"DELETE FROM session_tags WHERE session_id IN ({','.join(map(str, session_ids))})"))
-            print(f"  Cleared session association tables")
+            print("  Cleared session association tables")
         
         if user_ids:
             db.execute(text(f"DELETE FROM reviewer_tags WHERE user_id IN ({','.join(map(str, user_ids))})"))
-            print(f"  Cleared user association tables")
+            print("  Cleared user association tables")
         
         # Delete criteria scores for test criteria
         if criteria_ids:

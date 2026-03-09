@@ -1,6 +1,5 @@
 """Integration tests for /api/conferences endpoints."""
 
-import pytest
 from datetime import datetime, timedelta
 from tests.conftest import make_admin, make_user, make_conference, auth_header
 from app.models import ConferenceStatus

@@ -7,7 +7,7 @@ import uuid
 from jose import jwt, JWTError
 
 from app.database import get_db
-from app.models import Project, User, UserRole, Tag, ProjectStatus, Session as SessionModel, Notification, NotificationType, ProjectTeamInvitation, TeamInvitationStatus
+from app.models import Project, User, UserRole, Tag, ProjectStatus, Session as SessionModel, NotificationType, ProjectTeamInvitation, TeamInvitationStatus
 from app.schemas import (
     ProjectCreate, ProjectUpdate, ProjectResponse,
     ProjectWithStudent, ProjectStatusUpdate, NotificationCreate
@@ -84,7 +84,7 @@ async def get_my_projects(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only students can access this endpoint"
         )
-    from sqlalchemy import or_, func
+    from sqlalchemy import or_
     from app.models import Review
     
     projects = db.query(Project).filter(
@@ -99,7 +99,7 @@ async def get_my_projects(
     for project in projects:
         reviews = db.query(Review).filter(
             Review.project_id == project.id,
-            Review.is_completed == True
+            Review.is_completed == True  # noqa: E712
         ).all()
         
         # Calculate average only from reviews that have a total_score
@@ -233,8 +233,8 @@ async def get_all_reviewers_for_assignment(
     """Get all approved reviewers with their tags for assignment purposes"""
     reviewers = db.query(User).filter(
         User.role.in_([UserRole.INTERNAL_REVIEWER.value, UserRole.EXTERNAL_REVIEWER.value]),
-        User.is_approved == True,
-        User.is_active == True
+        User.is_approved == True,  # noqa: E712
+        User.is_active == True  # noqa: E712
     ).all()
     
     result = []
@@ -312,8 +312,8 @@ async def auto_assign_reviewers(
     # Get all approved and active reviewers
     reviewers = db.query(User).filter(
         User.role.in_([UserRole.INTERNAL_REVIEWER.value, UserRole.EXTERNAL_REVIEWER.value]),
-        User.is_approved == True,
-        User.is_active == True
+        User.is_approved == True,  # noqa: E712
+        User.is_active == True  # noqa: E712
     ).all()
     
     if not reviewers:
@@ -537,7 +537,7 @@ async def create_project(
             type=NotificationType.GENERAL,
             title="Added to Project Team",
             message=f'You have been added to the project "{project.title}" by {current_user.full_name}.',
-            link=f"/projects"
+            link="/projects"
         )
         create_notification(db, notification)
     
@@ -549,7 +549,7 @@ async def create_project(
             type=NotificationType.GENERAL,
             title="New Project Submission",
             message=f'New project "{project.title}" submitted by {current_user.full_name}.',
-            link=f"/admin/projects"
+            link="/admin/projects"
         )
         create_notification(db, notification)
     

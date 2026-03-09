@@ -1,8 +1,6 @@
 """Integration tests for /api/auth endpoints."""
 
-import pytest
-from tests.conftest import make_user, make_admin, make_reviewer, auth_header
-from app.models import UserRole
+from tests.conftest import make_user, make_reviewer, auth_header
 
 
 class TestRegister:

@@ -5,16 +5,13 @@ from pydantic import ValidationError
 
 from app.schemas import (
     UserCreate,
-    UserUpdate,
     ProjectCreate,
     CriteriaCreate,
     ConferenceBase,
-    LoginRequest,
     CriteriaScoreCreate,
     ReviewCreate,
     TagCreate,
     SessionCreate,
-    ALLOWED_BUILDINGS,
     allowed_rooms_for_floor,
 )
 from app.models import UserRole
