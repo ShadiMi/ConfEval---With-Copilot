@@ -1,6 +1,5 @@
 """Integration tests for /api/health and /api/stats endpoints."""
 
-import pytest
 from tests.conftest import make_user, make_session, make_project
 
 

@@ -1,6 +1,5 @@
 """Integration tests for /api/tags endpoints."""
 
-import pytest
 from tests.conftest import make_admin, make_user, make_tag, auth_header
 
 

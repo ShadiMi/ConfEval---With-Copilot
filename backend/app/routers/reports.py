@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from typing import List, Optional
 import csv
 import io
 from datetime import datetime
@@ -11,7 +10,7 @@ from jose import JWTError, jwt
 from app.database import get_db
 from app.models import (
     Session as SessionModel, User, UserRole, Project, Review, 
-    ProjectStatus, SessionStatus, Tag
+    ProjectStatus, SessionStatus
 )
 from app.auth import require_admin
 from app.config import settings
@@ -54,7 +53,7 @@ async def get_admin_overview(
     admins = db.query(User).filter(User.role == UserRole.ADMIN.value).count()
     pending_approval = db.query(User).filter(
         User.role.in_([UserRole.INTERNAL_REVIEWER.value, UserRole.EXTERNAL_REVIEWER.value]),
-        User.is_approved == False
+        User.is_approved == False  # noqa: E712
     ).count()
     
     # Session statistics
@@ -71,12 +70,12 @@ async def get_admin_overview(
     
     # Review statistics
     total_reviews = db.query(Review).count()
-    completed_reviews = db.query(Review).filter(Review.is_completed == True).count()
-    pending_reviews = db.query(Review).filter(Review.is_completed == False).count()
+    completed_reviews = db.query(Review).filter(Review.is_completed == True).count()  # noqa: E712
+    pending_reviews = db.query(Review).filter(Review.is_completed == False).count()  # noqa: E712
     
     # Calculate average score
     avg_score = db.query(func.avg(Review.total_score)).filter(
-        Review.is_completed == True,
+        Review.is_completed == True,  # noqa: E712
         Review.total_score.isnot(None)
     ).scalar() or 0
     
@@ -313,7 +312,7 @@ async def export_all_data(
     for r in reviewers:
         completed_reviews = db.query(Review).filter(
             Review.reviewer_id == r.id,
-            Review.is_completed == True
+            Review.is_completed == True  # noqa: E712
         ).count()
         writer.writerow([
             r.id, r.full_name, r.email, r.role,

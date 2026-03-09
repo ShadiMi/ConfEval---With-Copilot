@@ -188,7 +188,7 @@ async def update_application_status(
             type=NotificationType.APPLICATION_REJECTED,
             title="Application Update",
             message=f'Your application to "{session.name}" was not approved.',
-            link=f"/applications"
+            link="/applications"
         )
         create_notification(db, notification)
     

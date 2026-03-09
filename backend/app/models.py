@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime, Boolean, 
-    ForeignKey, Float, Enum, Table
+    ForeignKey, Float, Table
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func

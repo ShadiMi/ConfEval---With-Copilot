@@ -1,6 +1,5 @@
 'use client';
 
-import Logo from '@/components/Logo';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { Card, CardBody } from '@/components/ui/Card';
@@ -69,7 +68,9 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-3">
-              <Logo size={40} />
+              <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold text-lg">
+                CE
+              </div>
               <div>
                 <span className="text-xl font-bold text-slate-900">ConfEval</span>
                 <span className="hidden sm:inline text-xs text-slate-500 ml-2">Conference Review System</span>
