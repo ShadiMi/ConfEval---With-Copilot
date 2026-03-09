@@ -16,9 +16,8 @@ os.environ["DATABASE_URL"] = "sqlite://"
 from app.database import Base, get_db
 from app.models import (
     User, UserRole, Tag, Conference, Session, Project,
-    Criteria, Review, CriteriaScore, ReviewerApplication,
-    Notification, ConferenceStatus, SessionStatus, ProjectStatus,
-    ApplicationStatus, NotificationType,
+    Criteria,
+    ConferenceStatus, SessionStatus, ProjectStatus,
 )
 from app.auth import get_password_hash, create_access_token
 from main import app

@@ -1,9 +1,8 @@
 """Integration tests for /api/sessions endpoints."""
 
-import pytest
 from datetime import datetime, timedelta
 from tests.conftest import (
-    make_admin, make_user, make_reviewer, make_conference,
+    make_admin, make_user, make_conference,
     make_session, auth_header,
 )
 from app.models import SessionStatus

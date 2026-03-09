@@ -14,7 +14,6 @@ from app.database import SessionLocal
 from app.models import (
     User, UserRole, Session, SessionStatus, Project, ProjectStatus, 
     Tag, Review, CriteriaScore, Criteria, Conference, ConferenceStatus,
-    ReviewerApplication, ApplicationStatus, ProjectTeamInvitation
 )
 
 # Test data identifier prefix - used to identify test data for deletion
@@ -464,12 +463,12 @@ def create_test_data():
         print(f"  Created {reviews_created} reviews")
         
         print("\n✓ Test data created successfully!")
-        print(f"\nSummary:")
+        print("\nSummary:")
         print(f"  - {len(conferences)} conferences")
         print(f"  - {len(sessions)} sessions")
         print(f"  - {len(projects)} projects ({len([p for p in projects if p.status == ProjectStatus.APPROVED.value])} approved)")
         print(f"  - {reviews_created} reviews")
-        print(f"\nTest user credentials (password: test123):")
+        print("\nTest user credentials (password: test123):")
         print(f"  Students: {TEST_PREFIX}student1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}student{len(students)}{TEST_EMAIL_DOMAIN}")
         print(f"  Internal reviewers: {TEST_PREFIX}internal1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}internal{len(internal_reviewers)}{TEST_EMAIL_DOMAIN}")
         print(f"  External reviewers: {TEST_PREFIX}external1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}external{len(external_reviewers)}{TEST_EMAIL_DOMAIN}")

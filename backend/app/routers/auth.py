@@ -9,8 +9,8 @@ import uuid
 from app.database import get_db
 from app.models import User, UserRole, Tag, SiteSettings, NotificationType
 from app.schemas import (
-    UserCreate, UserResponse, UserUpdate, UserWithTags,
-    LoginRequest, Token, TagResponse, NotificationCreate
+    UserResponse, UserUpdate, UserWithTags,
+    LoginRequest, Token, NotificationCreate
 )
 from app.routers.notifications import create_notification
 from app.auth import (
@@ -356,7 +356,7 @@ async def get_pending_approval_count(
     """Get count of users pending approval (admin only)"""
     count = db.query(User).filter(
         User.role.in_([UserRole.INTERNAL_REVIEWER.value, UserRole.EXTERNAL_REVIEWER.value]),
-        User.is_approved == False
+        User.is_approved == False  # noqa: E712
     ).count()
     return {"pending_count": count}
 
@@ -604,7 +604,7 @@ async def google_auth(
         
         return {"access_token": access_token, "token_type": "bearer"}
         
-    except ValueError as e:
+    except ValueError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid Google token"

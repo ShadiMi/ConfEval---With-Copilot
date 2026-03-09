@@ -1,11 +1,9 @@
 """Integration tests for /api/projects endpoints."""
 
-import pytest
 from tests.conftest import (
     make_user, make_admin, make_reviewer, make_session,
-    make_project, make_tag, auth_header,
+    make_project, auth_header,
 )
-from app.models import ProjectStatus
 
 
 class TestListProjects:

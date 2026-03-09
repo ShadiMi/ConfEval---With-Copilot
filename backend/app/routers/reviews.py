@@ -41,7 +41,7 @@ async def list_reviews_for_project(
         # Students can only see completed reviews
         return db.query(Review).filter(
             Review.project_id == project_id,
-            Review.is_completed == True
+            Review.is_completed == True  # noqa: E712
         ).all()
     
     return db.query(Review).filter(Review.project_id == project_id).all()

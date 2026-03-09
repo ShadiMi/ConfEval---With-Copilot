@@ -1,16 +1,14 @@
 """Unit tests for SQLAlchemy models (table creation, relationships, enum values)."""
 
 import pytest
-from datetime import datetime, timedelta
 from tests.conftest import (
     make_user, make_admin, make_reviewer, make_tag,
     make_conference, make_session, make_project, make_criteria,
 )
 from app.models import (
-    User, UserRole, Tag, Conference, Session, Project,
-    Criteria, Review, CriteriaScore, ReviewerApplication,
-    Notification, ConferenceStatus, SessionStatus, ProjectStatus,
-    ApplicationStatus, NotificationType,
+    UserRole, Review, CriteriaScore,
+    ConferenceStatus, SessionStatus, ProjectStatus,
+    NotificationType,
 )
 
 

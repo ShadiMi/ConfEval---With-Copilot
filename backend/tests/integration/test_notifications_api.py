@@ -1,6 +1,5 @@
 """Integration tests for /api/notifications endpoints."""
 
-import pytest
 from tests.conftest import make_user, auth_header
 from app.models import Notification, NotificationType
 
