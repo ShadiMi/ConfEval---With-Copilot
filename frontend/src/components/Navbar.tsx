@@ -217,7 +217,6 @@ export default function Navbar() {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="flex items-center space-x-2">
-                <Logo size={40} />
                 <span className="text-xl font-bold text-primary-600">ConfEval</span>
               </Link>
             </div>
