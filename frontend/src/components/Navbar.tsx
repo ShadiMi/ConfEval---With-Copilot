@@ -25,7 +25,6 @@ import {
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import Logo from './Logo';
 
 interface NavItem {
   label: string;
