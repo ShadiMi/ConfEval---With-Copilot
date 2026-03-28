@@ -63,17 +63,12 @@ RUN apk add --no-cache libc6-compat
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy package files for production install
-COPY --from=builder /app/package.json ./
+# Copy the standalone build (includes node_modules, server.js, etc.)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 
-# Install production dependencies only
-RUN npm install --omit=dev && npm cache clean --force
-RUN npm audit fix
-RUN npm fund
-# Copy built application with correct ownership
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+# Copy static assets that standalone output does NOT include
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./
 
 # Switch to non-root user
 USER nextjs
@@ -86,4 +81,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
 
 # Start the application
-RUN node .next/standalone/server.js
+CMD ["node", "server.js"]
