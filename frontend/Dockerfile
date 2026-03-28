@@ -4,31 +4,28 @@
 # =============================================================================
 # Stage 1: Dependencies
 # =============================================================================
-FROM node:22-alpine AS deps
+FROM node:25-alpine AS deps
 
 WORKDIR /app
 
 # Install libc6-compat for Alpine compatibility
 RUN apk add --no-cache libc6-compat
 
-# Upgrade npm to 11.9.0
-RUN npm install -g npm@11.9.0
 
 # Copy package files
-COPY package.json package-lock.json ./
+COPY package*.json ./
 
 # Install all dependencies
 RUN npm ci
+RUN npm audit fix
+RUN npm fund
 
 # =============================================================================
 # Stage 2: Builder
 # =============================================================================
-FROM node:22-alpine AS builder
+FROM node:25-alpine AS builder
 
 WORKDIR /app
-
-# Upgrade npm to 11.9.0
-RUN npm install -g npm@11.9.0
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
@@ -43,11 +40,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
 RUN npm run build
-
+RUN npm audit fix
+RUN npm fund
 # =============================================================================
 # Stage 3: Production Runner
 # =============================================================================
-FROM node:22-alpine AS runner
+FROM node:25-alpine AS runner
 
 WORKDIR /app
 
@@ -60,8 +58,6 @@ ENV HOSTNAME="0.0.0.0"
 # Install libc6-compat for runtime
 RUN apk add --no-cache libc6-compat
 
-# Upgrade npm to 11.9.0
-RUN npm install -g npm@11.9.0
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
@@ -72,7 +68,8 @@ COPY --from=builder /app/package.json ./
 
 # Install production dependencies only
 RUN npm install --omit=dev && npm cache clean --force
-
+RUN npm audit fix
+RUN npm fund
 # Copy built application with correct ownership
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -89,4 +86,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000 || exit 1
 
 # Start the application
-CMD ["npm", "start"]
+RUN node .next/standalone/server.js
