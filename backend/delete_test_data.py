@@ -121,13 +121,18 @@ def delete_test_data():
         db.close()
 
 if __name__ == "__main__":
-    # Confirmation prompt
-    print("=" * 50)
-    print("WARNING: This will delete all test data!")
-    print("=" * 50)
-    response = input("\nAre you sure you want to continue? (yes/no): ")
+    import sys
     
-    if response.lower() == "yes":
+    if "--yes" in sys.argv or "-y" in sys.argv:
         delete_test_data()
     else:
-        print("Aborted.")
+        # Confirmation prompt
+        print("=" * 50)
+        print("WARNING: This will delete all test data!")
+        print("=" * 50)
+        response = input("\nAre you sure you want to continue? (yes/no): ")
+        
+        if response.lower() == "yes":
+            delete_test_data()
+        else:
+            print("Aborted.")
