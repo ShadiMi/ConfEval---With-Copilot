@@ -346,12 +346,19 @@ export default function ConferencesPage() {
             <h1 className="text-3xl font-bold text-slate-900">Conferences</h1>
             <p className="text-slate-500 mt-1">Manage your conferences and their sessions</p>
           </div>
-          <div>
-          <Link href={`/sessions/`} className="flex-2">
+          <div className="flex gap-3">
+          <Link href="/conferences">
             <Button variant="secondary">
-            <Layers className="w-4 h-10 mr-4" />
-              Manage sessions
-              <ChevronRight className="w-1 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+              <Layers className="w-4 h-4 mr-2" />
+              Browse Conferences
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </Link>
+          <Link href="/sessions/">
+            <Button variant="secondary">
+              <Layers className="w-4 h-4 mr-2" />
+              Manage Sessions
+              <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </Link>
           </div>
