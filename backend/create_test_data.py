@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Script to create test data for the ConfEval application.
-Creates: 12 students, 6 internal reviewers, 6 external reviewers, 3 conferences, 9 sessions, 36 projects, reviews
+Creates: 12 students, 6 internal reviewers, 6 external reviewers,
+         3 unapproved reviewers, 3 conferences, 9 sessions, 36 projects, reviews
 """
 
 import sys
@@ -78,7 +79,7 @@ def create_test_data():
         db.flush()
         print(f"  Created {len(students)} students")
         
-        # Create 6 internal reviewers
+        # Create 6 internal reviewers (approved)
         internal_reviewers = []
         internal_names = [
             ("Dr. James", "Anderson"),
@@ -103,7 +104,7 @@ def create_test_data():
         db.flush()
         print(f"  Created {len(internal_reviewers)} internal reviewers")
         
-        # Create 6 external reviewers
+        # Create 6 external reviewers (approved)
         external_reviewers = []
         external_names = [
             ("Prof. Robert", "Lee"),
@@ -128,43 +129,68 @@ def create_test_data():
         db.flush()
         print(f"  Created {len(external_reviewers)} external reviewers")
         
-        # Create 3 conferences
-        # Building names must be in Hebrew: לגסי, אינשטיין, ספרא, מינקוף, קציר, שמעון
+        # Create 3 unapproved reviewers (pending admin approval)
+        unapproved_reviewers = []
+        unapproved_names = [
+            ("Dr. Nathan", "Brooks", UserRole.INTERNAL_REVIEWER),
+            ("Prof. Olivia", "Santos", UserRole.EXTERNAL_REVIEWER),
+            ("Dr. Kevin", "Chen", UserRole.INTERNAL_REVIEWER),
+        ]
+        
+        for i, (first, last, role) in enumerate(unapproved_names, 1):
+            reviewer = User(
+                email=f"{TEST_PREFIX}unapproved{i}{TEST_EMAIL_DOMAIN}",
+                full_name=f"{first} {last}",
+                hashed_password=hash_password("test123"),
+                role=role.value,
+                is_approved=False,
+                affiliation="Pending University" if role == UserRole.INTERNAL_REVIEWER else f"External Org {chr(64 + i)}",
+            )
+            db.add(reviewer)
+            unapproved_reviewers.append(reviewer)
+        db.flush()
+        print(f"  Created {len(unapproved_reviewers)} unapproved reviewers")
+        
+        # Create 3 conferences with proper building/floor/room from UI options
+        # Valid buildings: לגסי, אינשטיין, ספרא, מינקוף, קציר, שמעון
+        # ספרא/לגסי/אינשטיין/שמעון: floors 1,2; rooms 101-109 / 201-209
+        # מינקוף: floor 1 only; rooms 104,105,106
+        # קציר: floor G- only; rooms G-07,G-08,G-09 (non-numeric, stored as location string)
         conferences = []
         conference_data = [
             {
                 "name": f"{TEST_PREFIX}Annual Research Conference 2026",
                 "description": "Annual multi-session research conference showcasing student projects across all disciplines",
-                "start_date": datetime.now() + timedelta(days=30),
-                "end_date": datetime.now() + timedelta(days=33),
+                "start_date": datetime(2026, 4, 28, 8, 0),
+                "end_date": datetime(2026, 5, 1, 20, 0),
                 "building": "ספרא",
                 "floor": 1,
-                "room_number": 101,
-                "location": "Main Campus",
+                "room_number": 103,
+                "location": "ספרא, קומה 1, חדר 103",
                 "status": ConferenceStatus.ACTIVE.value,
                 "max_sessions": 10,
             },
             {
                 "name": f"{TEST_PREFIX}Tech Innovation Summit 2026",
                 "description": "Technology and innovation focused conference featuring cutting-edge research",
-                "start_date": datetime.now() + timedelta(days=60),
-                "end_date": datetime.now() + timedelta(days=62),
+                "start_date": datetime(2026, 5, 25, 9, 0),
+                "end_date": datetime(2026, 5, 27, 18, 0),
                 "building": "לגסי",
                 "floor": 2,
                 "room_number": 201,
-                "location": "Innovation Hub",
+                "location": "לגסי, קומה 2, חדר 201",
                 "status": ConferenceStatus.ACTIVE.value,
                 "max_sessions": 8,
             },
             {
                 "name": f"{TEST_PREFIX}Graduate Research Expo 2026",
                 "description": "Graduate student research presentations and poster sessions",
-                "start_date": datetime.now() + timedelta(days=90),
-                "end_date": datetime.now() + timedelta(days=91),
+                "start_date": datetime(2026, 6, 22, 9, 0),
+                "end_date": datetime(2026, 6, 23, 17, 0),
                 "building": "אינשטיין",
                 "floor": 2,
                 "room_number": 205,
-                "location": "Graduate Building",
+                "location": "אינשטיין, קומה 2, חדר 205",
                 "status": ConferenceStatus.DRAFT.value,
                 "max_sessions": 6,
             },
@@ -178,104 +204,109 @@ def create_test_data():
         print(f"  Created {len(conferences)} conferences")
         
         # Create sessions for each conference (3 sessions per conference = 9 total)
+        # Session dates/times must be WITHIN their parent conference date range
+        # Session locations inherit from conference location
         sessions = []
         all_session_data = [
-            # Conference 1 sessions
+            # Conference 1: Apr 28 08:00 – May 1 20:00 @ ספרא, קומה 1, חדר 103
             {
                 "name": f"{TEST_PREFIX}AI and Machine Learning Track",
                 "description": "Presentations on artificial intelligence and machine learning research",
-                "conference_id": conferences[0].id,
-                "start_date": datetime.now() + timedelta(days=30),
-                "end_date": datetime.now() + timedelta(days=30, hours=4),
-                "location": "Room 101",
+                "conference_id": None,  # set below
+                "start_date": datetime(2026, 4, 28, 9, 0),
+                "end_date": datetime(2026, 4, 28, 13, 0),
+                "location": "ספרא, קומה 1, חדר 103",
                 "status": SessionStatus.UPCOMING.value,
                 "max_projects": 15,
             },
             {
                 "name": f"{TEST_PREFIX}Software Engineering Track",
                 "description": "Software development methodologies and best practices",
-                "conference_id": conferences[0].id,
-                "start_date": datetime.now() + timedelta(days=31),
-                "end_date": datetime.now() + timedelta(days=31, hours=4),
-                "location": "Room 102",
+                "conference_id": None,
+                "start_date": datetime(2026, 4, 29, 9, 0),
+                "end_date": datetime(2026, 4, 29, 13, 0),
+                "location": "ספרא, קומה 1, חדר 103",
                 "status": SessionStatus.UPCOMING.value,
                 "max_projects": 12,
             },
             {
                 "name": f"{TEST_PREFIX}Data Analytics Track",
                 "description": "Big data, analytics, and visualization projects",
-                "conference_id": conferences[0].id,
-                "start_date": datetime.now() + timedelta(days=32),
-                "end_date": datetime.now() + timedelta(days=32, hours=4),
-                "location": "Room 103",
+                "conference_id": None,
+                "start_date": datetime(2026, 4, 30, 10, 0),
+                "end_date": datetime(2026, 4, 30, 14, 0),
+                "location": "ספרא, קומה 1, חדר 103",
                 "status": SessionStatus.UPCOMING.value,
                 "max_projects": 10,
             },
-            # Conference 2 sessions
+            # Conference 2: May 25 09:00 – May 27 18:00 @ לגסי, קומה 2, חדר 201
             {
                 "name": f"{TEST_PREFIX}Web Technologies Workshop",
                 "description": "Modern web development frameworks and technologies",
-                "conference_id": conferences[1].id,
-                "start_date": datetime.now() + timedelta(days=60),
-                "end_date": datetime.now() + timedelta(days=60, hours=5),
-                "location": "Innovation Lab A",
+                "conference_id": None,
+                "start_date": datetime(2026, 5, 25, 10, 0),
+                "end_date": datetime(2026, 5, 25, 15, 0),
+                "location": "לגסי, קומה 2, חדר 201",
                 "status": SessionStatus.UPCOMING.value,
                 "max_projects": 12,
             },
             {
                 "name": f"{TEST_PREFIX}Mobile App Showcase",
                 "description": "iOS and Android application demonstrations",
-                "conference_id": conferences[1].id,
-                "start_date": datetime.now() + timedelta(days=61),
-                "end_date": datetime.now() + timedelta(days=61, hours=5),
-                "location": "Innovation Lab B",
+                "conference_id": None,
+                "start_date": datetime(2026, 5, 26, 10, 0),
+                "end_date": datetime(2026, 5, 26, 15, 0),
+                "location": "לגסי, קומה 2, חדר 201",
                 "status": SessionStatus.UPCOMING.value,
                 "max_projects": 10,
             },
             {
                 "name": f"{TEST_PREFIX}Cloud & DevOps Session",
                 "description": "Cloud infrastructure and DevOps practices",
-                "conference_id": conferences[1].id,
-                "start_date": datetime.now() + timedelta(days=62),
-                "end_date": datetime.now() + timedelta(days=62, hours=4),
-                "location": "Innovation Lab C",
+                "conference_id": None,
+                "start_date": datetime(2026, 5, 27, 9, 0),
+                "end_date": datetime(2026, 5, 27, 13, 0),
+                "location": "לגסי, קומה 2, חדר 201",
                 "status": SessionStatus.UPCOMING.value,
                 "max_projects": 8,
             },
-            # Conference 3 sessions
+            # Conference 3: Jun 22 09:00 – Jun 23 17:00 @ אינשטיין, קומה 2, חדר 205
             {
                 "name": f"{TEST_PREFIX}Cybersecurity Research",
                 "description": "Security research and vulnerability analysis",
-                "conference_id": conferences[2].id,
-                "start_date": datetime.now() + timedelta(days=90),
-                "end_date": datetime.now() + timedelta(days=90, hours=4),
-                "location": "Secure Lab 1",
+                "conference_id": None,
+                "start_date": datetime(2026, 6, 22, 9, 0),
+                "end_date": datetime(2026, 6, 22, 13, 0),
+                "location": "אינשטיין, קומה 2, חדר 205",
                 "status": SessionStatus.UPCOMING.value,
                 "max_projects": 8,
             },
             {
                 "name": f"{TEST_PREFIX}IoT and Embedded Systems",
                 "description": "Internet of Things and embedded computing projects",
-                "conference_id": conferences[2].id,
-                "start_date": datetime.now() + timedelta(days=90, hours=5),
-                "end_date": datetime.now() + timedelta(days=90, hours=9),
-                "location": "Hardware Lab",
+                "conference_id": None,
+                "start_date": datetime(2026, 6, 22, 14, 0),
+                "end_date": datetime(2026, 6, 22, 17, 0),
+                "location": "אינשטיין, קומה 2, חדר 205",
                 "status": SessionStatus.UPCOMING.value,
                 "max_projects": 6,
             },
             {
                 "name": f"{TEST_PREFIX}Emerging Technologies",
                 "description": "Blockchain, AR/VR, and other emerging tech",
-                "conference_id": conferences[2].id,
-                "start_date": datetime.now() + timedelta(days=91),
-                "end_date": datetime.now() + timedelta(days=91, hours=4),
-                "location": "Future Tech Room",
+                "conference_id": None,
+                "start_date": datetime(2026, 6, 23, 9, 0),
+                "end_date": datetime(2026, 6, 23, 13, 0),
+                "location": "אינשטיין, קומה 2, חדר 205",
                 "status": SessionStatus.UPCOMING.value,
                 "max_projects": 8,
             },
         ]
         
+        # Map sessions to their parent conference (3 per conference)
         for i, sess_data in enumerate(all_session_data):
+            conf_idx = i // 3  # 0,1,2 -> conf 0; 3,4,5 -> conf 1; 6,7,8 -> conf 2
+            sess_data["conference_id"] = conferences[conf_idx].id
             session = Session(**sess_data)
             # Assign different tags to different sessions
             session.tags = [tags[i % len(tags)], tags[(i + 1) % len(tags)]]
@@ -468,10 +499,12 @@ def create_test_data():
         print(f"  - {len(sessions)} sessions")
         print(f"  - {len(projects)} projects ({len([p for p in projects if p.status == ProjectStatus.APPROVED.value])} approved)")
         print(f"  - {reviews_created} reviews")
+        print(f"  - {len(unapproved_reviewers)} unapproved reviewers")
         print("\nTest user credentials (password: test123):")
         print(f"  Students: {TEST_PREFIX}student1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}student{len(students)}{TEST_EMAIL_DOMAIN}")
         print(f"  Internal reviewers: {TEST_PREFIX}internal1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}internal{len(internal_reviewers)}{TEST_EMAIL_DOMAIN}")
         print(f"  External reviewers: {TEST_PREFIX}external1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}external{len(external_reviewers)}{TEST_EMAIL_DOMAIN}")
+        print(f"  Unapproved reviewers: {TEST_PREFIX}unapproved1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}unapproved{len(unapproved_reviewers)}{TEST_EMAIL_DOMAIN}")
         
     except Exception as e:
         db.rollback()
