@@ -10,7 +10,23 @@ import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { conferencesApi, sessionsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { formatDate } from '@/lib/utils';
+import { extractErrorMessage, formatDate } from '@/lib/utils';
+
+const BUILDINGS = ['לגסי', 'אינשטיין', 'ספרא', 'מינקוף', 'קציר', 'שמעון'] as const;
+
+const floorsForBuilding = (building: string): (number | string)[] => {
+  if (building === 'מינקוף') return [1];
+  if (building === 'קציר') return ['G-'];
+  return [1, 2];
+};
+
+const roomsForFloor = (building: string, floor: '' | 1 | 2 | 'G-'): (number | string)[] => {
+  if (building === 'מינקוף' && floor === 1) return [104, 105, 106];
+  if (building === 'קציר' && floor === 'G-') return ['G-07', 'G-08', 'G-09'];
+  if (floor === 1) return Array.from({ length: 9 }, (_, i) => 101 + i);
+  if (floor === 2) return Array.from({ length: 9 }, (_, i) => 201 + i);
+  return [];
+};
 import { ConferenceWithSessions, Session } from '@/types';
 import {
   ArrowLeft,
@@ -58,7 +74,18 @@ export default function ConferenceDetailsPage() {
     max_projects: 50,
     status: 'upcoming' as string,
   });
-  const [conferenceForm, setConferenceForm] = useState({
+  const [conferenceForm, setConferenceForm] = useState<{
+    name: string;
+    description: string;
+    start_date: string;
+    end_date: string;
+    location: string;
+    status: string;
+    max_sessions: number;
+    building: string;
+    floor: '' | 1 | 2 | 'G-';
+    room_number: '' | number | string;
+  }>({
     name: '',
     description: '',
     start_date: '',
@@ -66,7 +93,18 @@ export default function ConferenceDetailsPage() {
     location: '',
     status: '',
     max_sessions: 10,
+    building: '',
+    floor: '',
+    room_number: '',
   });
+
+  useEffect(() => {
+    setConferenceForm((prev) => ({ ...prev, floor: '', room_number: '' }));
+  }, [conferenceForm.building]);
+
+  useEffect(() => {
+    setConferenceForm((prev) => ({ ...prev, room_number: '' }));
+  }, [conferenceForm.floor]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -110,13 +148,35 @@ export default function ConferenceDetailsPage() {
   // Create new session for this conference
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!conference) return;
     setSubmitting(true);
+
+    const sessionStart = new Date(sessionForm.start_date);
+    const sessionEnd = new Date(sessionForm.end_date);
+    const confStart = new Date(conference.start_date);
+    const confEnd = new Date(conference.end_date);
+
+    if (sessionStart < confStart || sessionStart > confEnd) {
+      toast.error('Session start must be within the conference dates');
+      setSubmitting(false);
+      return;
+    }
+    if (sessionEnd < confStart || sessionEnd > confEnd) {
+      toast.error('Session end must be within the conference dates');
+      setSubmitting(false);
+      return;
+    }
+    if (sessionEnd <= sessionStart) {
+      toast.error('Session end must be after session start');
+      setSubmitting(false);
+      return;
+    }
     
     try {
       await sessionsApi.create({
         ...sessionForm,
-        start_date: new Date(sessionForm.start_date).toISOString(),
-        end_date: new Date(sessionForm.end_date).toISOString(),
+        start_date: sessionStart.toISOString(),
+        end_date: sessionEnd.toISOString(),
         conference_id: conferenceId,
       });
       toast.success('Session created successfully');
@@ -169,14 +229,36 @@ export default function ConferenceDetailsPage() {
   // Update session
   const handleUpdateSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSession) return;
+    if (!selectedSession || !conference) return;
     
     setSubmitting(true);
+
+    const sessionStart = new Date(sessionForm.start_date);
+    const sessionEnd = new Date(sessionForm.end_date);
+    const confStart = new Date(conference.start_date);
+    const confEnd = new Date(conference.end_date);
+
+    if (sessionStart < confStart || sessionStart > confEnd) {
+      toast.error('Session start must be within the conference dates');
+      setSubmitting(false);
+      return;
+    }
+    if (sessionEnd < confStart || sessionEnd > confEnd) {
+      toast.error('Session end must be within the conference dates');
+      setSubmitting(false);
+      return;
+    }
+    if (sessionEnd <= sessionStart) {
+      toast.error('Session end must be after session start');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       await sessionsApi.update(selectedSession.id, {
         ...sessionForm,
-        start_date: new Date(sessionForm.start_date).toISOString(),
-        end_date: new Date(sessionForm.end_date).toISOString(),
+        start_date: sessionStart.toISOString(),
+        end_date: sessionEnd.toISOString(),
       });
       toast.success('Session updated successfully');
       setEditSessionModal(false);
@@ -209,6 +291,9 @@ export default function ConferenceDetailsPage() {
       location: conference.location || '',
       status: conference.status,
       max_sessions: conference.max_sessions,
+      building: conference.building || '',
+      floor: (conference.floor ?? '') as '' | 1 | 2 | 'G-',
+      room_number: (conference.room_number ?? '') as '' | number | string,
     });
     setEditConferenceModal(true);
   };
@@ -216,18 +301,40 @@ export default function ConferenceDetailsPage() {
   const handleUpdateConference = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    
+
+    const hasAny = !!(conferenceForm.building || conferenceForm.floor || conferenceForm.room_number);
+    const hasAll = !!(conferenceForm.building && conferenceForm.floor !== '' && conferenceForm.room_number !== '');
+
+    if (hasAny && !hasAll) {
+      toast.error('בחר בניין + קומה + חדר (חובה ביחד)');
+      setSubmitting(false);
+      return;
+    }
+
+    const isNonStandardBuilding = conferenceForm.building === 'קציר';
+
+    const computedLocation = hasAll
+      ? `${conferenceForm.building}, קומה ${conferenceForm.floor}, חדר ${conferenceForm.room_number}`
+      : undefined;
+
     try {
       await conferencesApi.update(conferenceId, {
-        ...conferenceForm,
+        name: conferenceForm.name,
+        description: conferenceForm.description,
         start_date: new Date(conferenceForm.start_date).toISOString(),
         end_date: new Date(conferenceForm.end_date).toISOString(),
+        status: conferenceForm.status,
+        max_sessions: conferenceForm.max_sessions,
+        building: isNonStandardBuilding ? undefined : (conferenceForm.building || undefined),
+        floor: isNonStandardBuilding ? undefined : (conferenceForm.floor === '' ? undefined : conferenceForm.floor as number),
+        room_number: isNonStandardBuilding ? undefined : (conferenceForm.room_number === '' ? undefined : Number(conferenceForm.room_number)),
+        location: isNonStandardBuilding ? computedLocation : undefined,
       });
       toast.success('Conference updated successfully');
       setEditConferenceModal(false);
       loadData();
     } catch (error: any) {
-      toast.error(error.response?.data?.detail || 'Failed to update conference');
+      toast.error(extractErrorMessage(error, 'Failed to update conference'));
     } finally {
       setSubmitting(false);
     }
@@ -400,7 +507,11 @@ export default function ConferenceDetailsPage() {
           <div className="space-y-4">
             {/* Session Actions */}
             {isAdmin && canAddMoreSessions && (
-              <Button onClick={() => setCreateSessionModal(true)}>
+              <Button onClick={() => {
+                const confStart = conference.start_date?.slice(0, 16) || '';
+                setSessionForm(prev => ({ ...prev, location: conference.location || '', start_date: confStart, end_date: confStart }));
+                setCreateSessionModal(true);
+              }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Session
               </Button>
@@ -434,7 +545,11 @@ export default function ConferenceDetailsPage() {
                         : 'Sessions will be added to this conference soon.'}
                     </p>
                     {isAdmin && (
-                      <Button onClick={() => setCreateSessionModal(true)}>
+                      <Button onClick={() => {
+                        const confStart = conference.start_date?.slice(0, 16) || '';
+                        setSessionForm(prev => ({ ...prev, location: conference.location || '', start_date: confStart, end_date: confStart }));
+                        setCreateSessionModal(true);
+                      }}>
                         <Plus className="w-4 h-4 mr-2" />
                         Create First Session
                       </Button>
@@ -611,12 +726,18 @@ export default function ConferenceDetailsPage() {
             onChange={(e) => setSessionForm({ ...sessionForm, description: e.target.value })}
             rows={3}
           />
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
+            <Calendar className="w-4 h-4 inline mr-1 text-slate-400" />
+            Conference dates: <strong>{formatDate(conference.start_date)}</strong> — <strong>{formatDate(conference.end_date)}</strong>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               type="datetime-local"
               label="Start Date & Time"
               value={sessionForm.start_date}
               onChange={(e) => setSessionForm({ ...sessionForm, start_date: e.target.value })}
+              min={conference.start_date?.slice(0, 16)}
+              max={conference.end_date?.slice(0, 16)}
               required
             />
             <Input
@@ -624,6 +745,8 @@ export default function ConferenceDetailsPage() {
               label="End Date & Time"
               value={sessionForm.end_date}
               onChange={(e) => setSessionForm({ ...sessionForm, end_date: e.target.value })}
+              min={sessionForm.start_date || conference.start_date?.slice(0, 16)}
+              max={conference.end_date?.slice(0, 16)}
               required
             />
           </div>
@@ -682,12 +805,18 @@ export default function ConferenceDetailsPage() {
             onChange={(e) => setSessionForm({ ...sessionForm, description: e.target.value })}
             rows={3}
           />
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
+            <Calendar className="w-4 h-4 inline mr-1 text-slate-400" />
+            Conference dates: <strong>{formatDate(conference.start_date)}</strong> — <strong>{formatDate(conference.end_date)}</strong>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               type="datetime-local"
               label="Start Date & Time"
               value={sessionForm.start_date}
               onChange={(e) => setSessionForm({ ...sessionForm, start_date: e.target.value })}
+              min={conference.start_date?.slice(0, 16)}
+              max={conference.end_date?.slice(0, 16)}
               required
             />
             <Input
@@ -695,6 +824,8 @@ export default function ConferenceDetailsPage() {
               label="End Date & Time"
               value={sessionForm.end_date}
               onChange={(e) => setSessionForm({ ...sessionForm, end_date: e.target.value })}
+              min={sessionForm.start_date || conference.start_date?.slice(0, 16)}
+              max={conference.end_date?.slice(0, 16)}
               required
             />
           </div>
@@ -742,7 +873,7 @@ export default function ConferenceDetailsPage() {
         title="Edit Conference"
         size="lg"
       >
-        <form onSubmit={handleUpdateConference} className="space-y-4">
+        <form onSubmit={handleUpdateConference} className="space-y-5">
           <Input
             label="Conference Name"
             value={conferenceForm.name}
@@ -758,24 +889,60 @@ export default function ConferenceDetailsPage() {
           <div className="grid grid-cols-2 gap-4">
             <Input
               type="datetime-local"
-              label="Start Date"
+              label="Start Date & Time"
               value={conferenceForm.start_date}
               onChange={(e) => setConferenceForm({ ...conferenceForm, start_date: e.target.value })}
               required
             />
             <Input
               type="datetime-local"
-              label="End Date"
+              label="End Date & Time"
               value={conferenceForm.end_date}
               onChange={(e) => setConferenceForm({ ...conferenceForm, end_date: e.target.value })}
               required
             />
           </div>
-          <Input
-            label="Location"
-            value={conferenceForm.location}
-            onChange={(e) => setConferenceForm({ ...conferenceForm, location: e.target.value })}
-          />
+
+          <div className="p-4 bg-slate-50 rounded-lg space-y-4">
+            <p className="text-sm font-medium text-slate-700">Location</p>
+            <div className="grid grid-cols-3 gap-3">
+              <select
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={conferenceForm.building}
+                onChange={(e) => setConferenceForm({ ...conferenceForm, building: e.target.value })}
+              >
+                <option value="">Building</option>
+                {BUILDINGS.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+              <select
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={conferenceForm.floor}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const floor = val === '' ? '' : val === 'G-' ? 'G-' : Number(val) as 1 | 2;
+                  setConferenceForm({ ...conferenceForm, floor });
+                }}
+                disabled={!conferenceForm.building}
+              >
+                <option value="">Floor</option>
+                {floorsForBuilding(conferenceForm.building).map((f) => <option key={String(f)} value={String(f)}>Floor {f}</option>)}
+              </select>
+              <select
+                className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                value={conferenceForm.room_number}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const room = val === '' ? '' : (typeof val === 'string' && val.startsWith('G-')) ? val : Number(val);
+                  setConferenceForm({ ...conferenceForm, room_number: room });
+                }}
+                disabled={!conferenceForm.floor}
+              >
+                <option value="">Room</option>
+                {roomsForFloor(conferenceForm.building, conferenceForm.floor).map((r) => <option key={String(r)} value={String(r)}>{r}</option>)}
+              </select>
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <Select
               label="Status"
