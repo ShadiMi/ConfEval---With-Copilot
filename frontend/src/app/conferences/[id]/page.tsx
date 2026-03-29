@@ -148,13 +148,35 @@ export default function ConferenceDetailsPage() {
   // Create new session for this conference
   const handleCreateSession = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!conference) return;
     setSubmitting(true);
+
+    const sessionStart = new Date(sessionForm.start_date);
+    const sessionEnd = new Date(sessionForm.end_date);
+    const confStart = new Date(conference.start_date);
+    const confEnd = new Date(conference.end_date);
+
+    if (sessionStart < confStart || sessionStart > confEnd) {
+      toast.error('Session start must be within the conference dates');
+      setSubmitting(false);
+      return;
+    }
+    if (sessionEnd < confStart || sessionEnd > confEnd) {
+      toast.error('Session end must be within the conference dates');
+      setSubmitting(false);
+      return;
+    }
+    if (sessionEnd <= sessionStart) {
+      toast.error('Session end must be after session start');
+      setSubmitting(false);
+      return;
+    }
     
     try {
       await sessionsApi.create({
         ...sessionForm,
-        start_date: new Date(sessionForm.start_date).toISOString(),
-        end_date: new Date(sessionForm.end_date).toISOString(),
+        start_date: sessionStart.toISOString(),
+        end_date: sessionEnd.toISOString(),
         conference_id: conferenceId,
       });
       toast.success('Session created successfully');
@@ -207,14 +229,36 @@ export default function ConferenceDetailsPage() {
   // Update session
   const handleUpdateSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSession) return;
+    if (!selectedSession || !conference) return;
     
     setSubmitting(true);
+
+    const sessionStart = new Date(sessionForm.start_date);
+    const sessionEnd = new Date(sessionForm.end_date);
+    const confStart = new Date(conference.start_date);
+    const confEnd = new Date(conference.end_date);
+
+    if (sessionStart < confStart || sessionStart > confEnd) {
+      toast.error('Session start must be within the conference dates');
+      setSubmitting(false);
+      return;
+    }
+    if (sessionEnd < confStart || sessionEnd > confEnd) {
+      toast.error('Session end must be within the conference dates');
+      setSubmitting(false);
+      return;
+    }
+    if (sessionEnd <= sessionStart) {
+      toast.error('Session end must be after session start');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       await sessionsApi.update(selectedSession.id, {
         ...sessionForm,
-        start_date: new Date(sessionForm.start_date).toISOString(),
-        end_date: new Date(sessionForm.end_date).toISOString(),
+        start_date: sessionStart.toISOString(),
+        end_date: sessionEnd.toISOString(),
       });
       toast.success('Session updated successfully');
       setEditSessionModal(false);
@@ -463,7 +507,11 @@ export default function ConferenceDetailsPage() {
           <div className="space-y-4">
             {/* Session Actions */}
             {isAdmin && canAddMoreSessions && (
-              <Button onClick={() => setCreateSessionModal(true)}>
+              <Button onClick={() => {
+                const confStart = conference.start_date?.slice(0, 16) || '';
+                setSessionForm(prev => ({ ...prev, location: conference.location || '', start_date: confStart, end_date: confStart }));
+                setCreateSessionModal(true);
+              }}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create New Session
               </Button>
@@ -497,7 +545,11 @@ export default function ConferenceDetailsPage() {
                         : 'Sessions will be added to this conference soon.'}
                     </p>
                     {isAdmin && (
-                      <Button onClick={() => setCreateSessionModal(true)}>
+                      <Button onClick={() => {
+                        const confStart = conference.start_date?.slice(0, 16) || '';
+                        setSessionForm(prev => ({ ...prev, location: conference.location || '', start_date: confStart, end_date: confStart }));
+                        setCreateSessionModal(true);
+                      }}>
                         <Plus className="w-4 h-4 mr-2" />
                         Create First Session
                       </Button>
@@ -674,12 +726,18 @@ export default function ConferenceDetailsPage() {
             onChange={(e) => setSessionForm({ ...sessionForm, description: e.target.value })}
             rows={3}
           />
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
+            <Calendar className="w-4 h-4 inline mr-1 text-slate-400" />
+            Conference dates: <strong>{formatDate(conference.start_date)}</strong> — <strong>{formatDate(conference.end_date)}</strong>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               type="datetime-local"
               label="Start Date & Time"
               value={sessionForm.start_date}
               onChange={(e) => setSessionForm({ ...sessionForm, start_date: e.target.value })}
+              min={conference.start_date?.slice(0, 16)}
+              max={conference.end_date?.slice(0, 16)}
               required
             />
             <Input
@@ -687,6 +745,8 @@ export default function ConferenceDetailsPage() {
               label="End Date & Time"
               value={sessionForm.end_date}
               onChange={(e) => setSessionForm({ ...sessionForm, end_date: e.target.value })}
+              min={sessionForm.start_date || conference.start_date?.slice(0, 16)}
+              max={conference.end_date?.slice(0, 16)}
               required
             />
           </div>
@@ -745,12 +805,18 @@ export default function ConferenceDetailsPage() {
             onChange={(e) => setSessionForm({ ...sessionForm, description: e.target.value })}
             rows={3}
           />
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
+            <Calendar className="w-4 h-4 inline mr-1 text-slate-400" />
+            Conference dates: <strong>{formatDate(conference.start_date)}</strong> — <strong>{formatDate(conference.end_date)}</strong>
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
               type="datetime-local"
               label="Start Date & Time"
               value={sessionForm.start_date}
               onChange={(e) => setSessionForm({ ...sessionForm, start_date: e.target.value })}
+              min={conference.start_date?.slice(0, 16)}
+              max={conference.end_date?.slice(0, 16)}
               required
             />
             <Input
@@ -758,6 +824,8 @@ export default function ConferenceDetailsPage() {
               label="End Date & Time"
               value={sessionForm.end_date}
               onChange={(e) => setSessionForm({ ...sessionForm, end_date: e.target.value })}
+              min={sessionForm.start_date || conference.start_date?.slice(0, 16)}
+              max={conference.end_date?.slice(0, 16)}
               required
             />
           </div>
