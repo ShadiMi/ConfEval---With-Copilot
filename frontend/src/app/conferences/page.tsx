@@ -10,7 +10,7 @@ import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { conferencesApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { extractErrorMessage, formatDate } from '@/lib/utils';
+import { extractErrorMessage, formatDateTime, nowDateTimeLocal } from '@/lib/utils';
 import { ConferenceWithSessions } from '@/types';
 import {
     Calendar,
@@ -122,6 +122,19 @@ export default function ConferencesListPage() {
     e.preventDefault();
     setSubmitting(true);
     
+    const start = new Date(formData.start_date);
+    const end = new Date(formData.end_date);
+    if (start < new Date()) {
+      toast.error('Conference start date cannot be in the past');
+      setSubmitting(false);
+      return;
+    }
+    if (end <= start) {
+      toast.error('End date must be after start date');
+      setSubmitting(false);
+      return;
+    }
+
     try {
       const computedLocation =
         formData.location?.trim() ||
@@ -302,7 +315,7 @@ export default function ConferencesListPage() {
                   <div className="space-y-2 text-sm text-slate-600">
                     <div className="flex items-center">
                       <Calendar className="w-4 h-4 mr-2 text-slate-400" />
-                      {formatDate(conference.start_date)} - {formatDate(conference.end_date)}
+                      {formatDateTime(conference.start_date)} - {formatDateTime(conference.end_date)}
                     </div>
                     {conference.location && (
                       <div className="flex items-center">
@@ -362,6 +375,7 @@ export default function ConferencesListPage() {
               type="datetime-local"
               value={formData.start_date}
               onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              min={nowDateTimeLocal()}
               required
             />
             <Input
@@ -369,6 +383,7 @@ export default function ConferencesListPage() {
               type="datetime-local"
               value={formData.end_date}
               onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              min={formData.start_date || nowDateTimeLocal()}
               required
             />
           </div>

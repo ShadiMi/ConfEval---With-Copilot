@@ -4,13 +4,87 @@ from typing import List
 from datetime import datetime, timezone
 
 from app.database import get_db
-from app.models import Session as SessionModel, User, UserRole, SessionStatus, Tag
+from app.models import Session as SessionModel, User, UserRole, SessionStatus, Tag, Conference
 from app.schemas import (
     SessionCreate, SessionUpdate, SessionResponse, SessionWithDetails
 )
 from app.auth import get_current_user, require_admin
 
 router = APIRouter(prefix="/sessions", tags=["Sessions"])
+
+
+# ---------------------------
+# Date validation helpers
+# ---------------------------
+def _to_aware(dt: datetime) -> datetime:
+    """Normalize datetime to timezone-aware UTC."""
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
+
+
+def _validate_session_dates(
+    start_date: datetime,
+    end_date: datetime,
+    conference_id: int | None,
+    db: Session,
+    exclude_session_id: int | None = None,
+    is_new: bool = True,
+):
+    """
+    Validate session dates:
+      1. start_date must not be in the past (only enforced for new/changed sessions).
+      2. end_date must be after start_date.
+      3. If conference_id given, session must be within conference dates.
+      4. Sessions in the same conference must not overlap.
+    """
+    start = _to_aware(start_date)
+    end = _to_aware(end_date)
+    now = datetime.now(timezone.utc)
+
+    if end <= start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="End date must be after start date",
+        )
+
+    if is_new and start < now:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Session start date cannot be in the past",
+        )
+
+    if conference_id is not None:
+        conference = db.query(Conference).filter(Conference.id == conference_id).first()
+        if not conference:
+            raise HTTPException(status_code=404, detail="Conference not found")
+
+        conf_start = _to_aware(conference.start_date)
+        conf_end = _to_aware(conference.end_date)
+
+        if start < conf_start or end > conf_end:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Session must be within the conference start and end dates",
+            )
+
+        # Overlap check against sibling sessions
+        siblings_q = db.query(SessionModel).filter(SessionModel.conference_id == conference_id)
+        if exclude_session_id is not None:
+            siblings_q = siblings_q.filter(SessionModel.id != exclude_session_id)
+
+        for sibling in siblings_q.all():
+            sib_start = _to_aware(sibling.start_date)
+            sib_end = _to_aware(sibling.end_date)
+            # Overlap when neither ends before the other starts
+            if not (end <= sib_start or start >= sib_end):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Session overlaps with existing session '{sibling.name}' "
+                        f"in the same conference"
+                    ),
+                )
 
 
 @router.get("/public", response_model=List[SessionResponse])
@@ -94,16 +168,19 @@ async def create_session(
     db: Session = Depends(get_db)
 ):
     """Create a new session (admin only)"""
-    if session_data.end_date <= session_data.start_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="End date must be after start date"
-        )
-    
+    _validate_session_dates(
+        session_data.start_date,
+        session_data.end_date,
+        session_data.conference_id,
+        db,
+        exclude_session_id=None,
+        is_new=True,
+    )
+
     # Determine initial status - make datetimes comparable
     now = datetime.now(timezone.utc)
-    start_date = session_data.start_date.replace(tzinfo=timezone.utc) if session_data.start_date.tzinfo is None else session_data.start_date
-    end_date = session_data.end_date.replace(tzinfo=timezone.utc) if session_data.end_date.tzinfo is None else session_data.end_date
+    start_date = _to_aware(session_data.start_date)
+    end_date = _to_aware(session_data.end_date)
     
     if start_date > now:
         session_status = SessionStatus.UPCOMING.value
@@ -144,11 +221,17 @@ async def update_session(
     # Validate dates if updating
     start_date = update_data.get('start_date', session.start_date)
     end_date = update_data.get('end_date', session.end_date)
-    if end_date <= start_date:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="End date must be after start date"
-        )
+    conference_id = update_data.get('conference_id', session.conference_id)
+    # Only enforce "not in the past" if dates are being changed
+    dates_changed = ('start_date' in update_data) or ('end_date' in update_data)
+    _validate_session_dates(
+        start_date,
+        end_date,
+        conference_id,
+        db,
+        exclude_session_id=session.id,
+        is_new=dates_changed,
+    )
     
     for key, value in update_data.items():
         if value is not None:

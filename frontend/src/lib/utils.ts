@@ -15,6 +15,16 @@ export function formatDateTime(date: string | Date) {
   return formatDate(date, 'MMM d, yyyy h:mm a');
 }
 
+/**
+ * Returns the current local datetime formatted for use as the `min`
+ * attribute on `<input type="datetime-local" />` (YYYY-MM-DDTHH:mm).
+ */
+export function nowDateTimeLocal() {
+  const d = new Date();
+  const offset = d.getTimezoneOffset() * 60000;
+  return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+}
+
 export function getRoleLabel(role: string): string {
   const labels: Record<string, string> = {
     student: 'Student',
