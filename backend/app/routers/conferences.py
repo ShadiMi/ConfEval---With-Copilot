@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, selectinload
 from typing import List, Optional
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models import Conference, Session as SessionModel, User, UserRole, ConferenceStatus
@@ -11,6 +12,13 @@ from app.auth import get_current_user, require_admin
 
 
 router = APIRouter(prefix="/conferences", tags=["Conferences"])
+
+
+def _to_aware(dt):
+    """Normalize datetime to timezone-aware UTC."""
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
 
 # ---------------------------
 # Location Helpers
@@ -143,6 +151,12 @@ async def create_conference(
     if conference_data.end_date <= conference_data.start_date:
         raise HTTPException(status_code=400, detail="End date must be after start date")
 
+    if _to_aware(conference_data.start_date) < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=400,
+            detail="Conference start date cannot be in the past",
+        )
+
     # Build location if needed
     location_value = fill_location_if_missing(conference_data)
 
@@ -195,6 +209,29 @@ async def update_conference(
     end = update_data.get("end_date", conference.end_date)
     if end <= start:
         raise HTTPException(status_code=400, detail="End date must be after start date")
+
+    # Only enforce "not in the past" when start_date is being changed
+    if "start_date" in update_data and _to_aware(start) < datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=400,
+            detail="Conference start date cannot be in the past",
+        )
+
+    # If dates are being changed, ensure existing sessions still fit within the conference
+    if ("start_date" in update_data or "end_date" in update_data) and conference.sessions:
+        new_start = _to_aware(start)
+        new_end = _to_aware(end)
+        for sess in conference.sessions:
+            s_start = _to_aware(sess.start_date)
+            s_end = _to_aware(sess.end_date)
+            if s_start < new_start or s_end > new_end:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Cannot change conference dates: session '{sess.name}' "
+                        f"would fall outside the new conference window"
+                    ),
+                )
 
     # Check max_sessions against current session count
     if "max_sessions" in update_data:
@@ -317,6 +354,32 @@ async def add_session_to_conference(
             status_code=400,
             detail=f"Conference has reached maximum number of sessions ({conference.max_sessions})",
         )
+
+    # Validate session dates against the conference window
+    s_start = _to_aware(session.start_date)
+    s_end = _to_aware(session.end_date)
+    c_start = _to_aware(conference.start_date)
+    c_end = _to_aware(conference.end_date)
+    if s_start < c_start or s_end > c_end:
+        raise HTTPException(
+            status_code=400,
+            detail="Session dates must be within the conference start and end dates",
+        )
+
+    # Overlap check vs other sessions already in the conference
+    for other in conference.sessions or []:
+        if other.id == session.id:
+            continue
+        o_start = _to_aware(other.start_date)
+        o_end = _to_aware(other.end_date)
+        if not (s_end <= o_start or s_start >= o_end):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Session overlaps with existing session '{other.name}' "
+                    f"in the same conference"
+                ),
+            )
 
     session.conference_id = conference_id
     db.commit()

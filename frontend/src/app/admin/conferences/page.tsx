@@ -7,7 +7,7 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import Textarea from '@/components/ui/Textarea';
 import { conferencesApi, sessionsApi } from '@/lib/api';
-import { extractErrorMessage, formatDate } from '@/lib/utils';
+import { extractErrorMessage, formatDate, formatDateTime, nowDateTimeLocal } from '@/lib/utils';
 import { Conference, ConferenceWithSessions, Session } from '@/types';
 import {
     Calendar,
@@ -121,6 +121,16 @@ export default function ConferencesPage() {
   };
 
   const handleCreate = async () => {
+    const start = new Date(formData.start_date);
+    const end = new Date(formData.end_date);
+    if (start < new Date()) {
+      toast.error('Conference start date cannot be in the past');
+      return;
+    }
+    if (end <= start) {
+      toast.error('End date must be after start date');
+      return;
+    }
     try {
       const computedLocation =
         formData.location?.trim() ||
@@ -148,6 +158,19 @@ export default function ConferencesPage() {
 
   const handleUpdate = async () => {
     if (!selectedConference) return;
+
+    const start = new Date(formData.start_date);
+    const end = new Date(formData.end_date);
+    const originalStart = selectedConference.start_date.slice(0, 16);
+    const startChanged = formData.start_date !== originalStart;
+    if (startChanged && start < new Date()) {
+      toast.error('Conference start date cannot be in the past');
+      return;
+    }
+    if (end <= start) {
+      toast.error('End date must be after start date');
+      return;
+    }
 
     const hasAny = !!(formData.building || formData.floor || formData.room_number);
     const hasAll = !!(formData.building && formData.floor !== '' && formData.room_number !== '');
@@ -227,6 +250,10 @@ export default function ConferencesPage() {
     const confStart = new Date(selectedConference.start_date);
     const confEnd = new Date(selectedConference.end_date);
 
+    if (sessionStart < new Date()) {
+      toast.error('Session start date cannot be in the past');
+      return;
+    }
     if (sessionStart < confStart || sessionStart > confEnd) {
       toast.error('Session start must be within the conference dates');
       return;
@@ -543,7 +570,7 @@ export default function ConferencesPage() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2 text-sm text-slate-600">
                           <Calendar className="w-4 h-4 text-slate-400" />
-                          <span>{formatDate(conference.start_date).split(',')[0]}</span>
+                          <span>{formatDateTime(conference.start_date)} – {formatDateTime(conference.end_date)}</span>
                         </div>
                       </td>
 
@@ -651,6 +678,7 @@ export default function ConferencesPage() {
               type="datetime-local"
               value={formData.start_date}
               onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              min={nowDateTimeLocal()}
               required
             />
             <Input
@@ -658,6 +686,7 @@ export default function ConferencesPage() {
               type="datetime-local"
               value={formData.end_date}
               onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              min={formData.start_date || nowDateTimeLocal()}
               required
             />
           </div>
@@ -751,6 +780,7 @@ export default function ConferencesPage() {
               type="datetime-local"
               value={formData.start_date}
               onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+              min={nowDateTimeLocal()}
               required
             />
             <Input
@@ -758,6 +788,7 @@ export default function ConferencesPage() {
               type="datetime-local"
               value={formData.end_date}
               onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+              min={formData.start_date || nowDateTimeLocal()}
               required
             />
           </div>
@@ -846,11 +877,11 @@ export default function ConferencesPage() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-slate-500">Start Date</p>
-                  <p className="font-medium text-slate-900">{formatDate(selectedConference.start_date)}</p>
+                  <p className="font-medium text-slate-900">{formatDateTime(selectedConference.start_date)}</p>
                 </div>
                 <div>
                   <p className="text-slate-500">End Date</p>
-                  <p className="font-medium text-slate-900">{formatDate(selectedConference.end_date)}</p>
+                  <p className="font-medium text-slate-900">{formatDateTime(selectedConference.end_date)}</p>
                 </div>
                 {selectedConference.location && (
                   <div className="col-span-2">
@@ -900,7 +931,7 @@ export default function ConferencesPage() {
                       <div className="flex-1">
                         <h5 className="font-medium text-slate-900">{session.name}</h5>
                         <p className="text-sm text-slate-500">
-                          {formatDate(session.start_date)} - {formatDate(session.end_date)}
+                          {formatDateTime(session.start_date)} - {formatDateTime(session.end_date)}
                         </p>
                         {session.location && (
                           <p className="text-sm text-slate-400 flex items-center gap-1 mt-1">
@@ -958,7 +989,7 @@ export default function ConferencesPage() {
           {selectedConference && (
             <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
               <Calendar className="w-4 h-4 inline mr-1 text-slate-400" />
-              Conference dates: <strong>{formatDate(selectedConference.start_date)}</strong> — <strong>{formatDate(selectedConference.end_date)}</strong>
+              Conference dates: <strong>{formatDateTime(selectedConference.start_date)}</strong> — <strong>{formatDateTime(selectedConference.end_date)}</strong>
             </div>
           )}
 
@@ -968,7 +999,7 @@ export default function ConferencesPage() {
               label="Start Date & Time"
               value={sessionForm.start_date}
               onChange={(e) => setSessionForm({ ...sessionForm, start_date: e.target.value })}
-              min={selectedConference?.start_date?.slice(0, 16)}
+              min={nowDateTimeLocal() > (selectedConference?.start_date?.slice(0, 16) || '') ? nowDateTimeLocal() : selectedConference?.start_date?.slice(0, 16)}
               max={selectedConference?.end_date?.slice(0, 16)}
               required
             />

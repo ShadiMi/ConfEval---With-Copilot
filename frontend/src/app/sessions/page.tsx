@@ -10,7 +10,7 @@ import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { applicationsApi, conferencesApi, sessionsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { formatDate } from '@/lib/utils';
+import { formatDateTime } from '@/lib/utils';
 import { Conference, ReviewerApplication, Session } from '@/types';
 import {
     Calendar,
@@ -267,7 +267,7 @@ export default function SessionsPage() {
                   <div className="space-y-2 text-sm text-slate-500">
                     <div className="flex items-center">
                       <Clock className="w-4 h-4 mr-2 text-slate-400" />
-                      {formatDate(session.start_date)} - {formatDate(session.end_date)}
+                      {formatDateTime(session.start_date)} - {formatDateTime(session.end_date)}
                     </div>
                     {session.location && (
                       <div className="flex items-center">

@@ -10,7 +10,7 @@ import Select from '@/components/ui/Select';
 import Textarea from '@/components/ui/Textarea';
 import { conferencesApi, sessionsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
-import { extractErrorMessage, formatDate } from '@/lib/utils';
+import { extractErrorMessage, formatDate, formatDateTime, nowDateTimeLocal } from '@/lib/utils';
 
 const BUILDINGS = ['לגסי', 'אינשטיין', 'ספרא', 'מינקוף', 'קציר', 'שמעון'] as const;
 
@@ -156,6 +156,11 @@ export default function ConferenceDetailsPage() {
     const confStart = new Date(conference.start_date);
     const confEnd = new Date(conference.end_date);
 
+    if (sessionStart < new Date()) {
+      toast.error('Session start date cannot be in the past');
+      setSubmitting(false);
+      return;
+    }
     if (sessionStart < confStart || sessionStart > confEnd) {
       toast.error('Session start must be within the conference dates');
       setSubmitting(false);
@@ -238,6 +243,14 @@ export default function ConferenceDetailsPage() {
     const confStart = new Date(conference.start_date);
     const confEnd = new Date(conference.end_date);
 
+    const datesChanged =
+      sessionForm.start_date !== selectedSession.start_date.slice(0, 16) ||
+      sessionForm.end_date !== selectedSession.end_date.slice(0, 16);
+    if (datesChanged && sessionStart < new Date()) {
+      toast.error('Session start date cannot be in the past');
+      setSubmitting(false);
+      return;
+    }
     if (sessionStart < confStart || sessionStart > confEnd) {
       toast.error('Session start must be within the conference dates');
       setSubmitting(false);
@@ -425,7 +438,7 @@ export default function ConferenceDetailsPage() {
               <div>
                 <p className="text-sm text-slate-500">Duration</p>
                 <p className="font-semibold text-slate-900 text-sm">
-                  {formatDate(conference.start_date)} - {formatDate(conference.end_date)}
+                  {formatDateTime(conference.start_date)} - {formatDateTime(conference.end_date)}
                 </p>
               </div>
             </CardBody>
@@ -597,7 +610,7 @@ export default function ConferenceDetailsPage() {
                       <div className="space-y-2">
                         <div className="flex items-center text-sm text-slate-500">
                           <Clock className="w-4 h-4 mr-2 text-slate-400" />
-                          <span>{formatDate(session.start_date)} - {formatDate(session.end_date)}</span>
+                          <span>{formatDateTime(session.start_date)} - {formatDateTime(session.end_date)}</span>
                         </div>
                         {session.location && (
                           <div className="flex items-center text-sm text-slate-500">
@@ -728,7 +741,7 @@ export default function ConferenceDetailsPage() {
           />
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
             <Calendar className="w-4 h-4 inline mr-1 text-slate-400" />
-            Conference dates: <strong>{formatDate(conference.start_date)}</strong> — <strong>{formatDate(conference.end_date)}</strong>
+            Conference dates: <strong>{formatDateTime(conference.start_date)}</strong> — <strong>{formatDateTime(conference.end_date)}</strong>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -736,7 +749,7 @@ export default function ConferenceDetailsPage() {
               label="Start Date & Time"
               value={sessionForm.start_date}
               onChange={(e) => setSessionForm({ ...sessionForm, start_date: e.target.value })}
-              min={conference.start_date?.slice(0, 16)}
+              min={nowDateTimeLocal() > (conference.start_date?.slice(0, 16) || '') ? nowDateTimeLocal() : conference.start_date?.slice(0, 16)}
               max={conference.end_date?.slice(0, 16)}
               required
             />
@@ -807,7 +820,7 @@ export default function ConferenceDetailsPage() {
           />
           <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-600">
             <Calendar className="w-4 h-4 inline mr-1 text-slate-400" />
-            Conference dates: <strong>{formatDate(conference.start_date)}</strong> — <strong>{formatDate(conference.end_date)}</strong>
+            Conference dates: <strong>{formatDateTime(conference.start_date)}</strong> — <strong>{formatDateTime(conference.end_date)}</strong>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input
@@ -892,6 +905,7 @@ export default function ConferenceDetailsPage() {
               label="Start Date & Time"
               value={conferenceForm.start_date}
               onChange={(e) => setConferenceForm({ ...conferenceForm, start_date: e.target.value })}
+              min={nowDateTimeLocal()}
               required
             />
             <Input
@@ -899,6 +913,7 @@ export default function ConferenceDetailsPage() {
               label="End Date & Time"
               value={conferenceForm.end_date}
               onChange={(e) => setConferenceForm({ ...conferenceForm, end_date: e.target.value })}
+              min={conferenceForm.start_date || nowDateTimeLocal()}
               required
             />
           </div>
