@@ -72,6 +72,18 @@ export interface SessionWithDetails extends Session {
   project_count: number;
 }
 
+export interface UpcomingActivity {
+  type: 'session' | 'review_due';
+  id: number;
+  title: string;
+  start_date: string;
+  end_date: string;
+  location?: string;
+  status?: string;
+  conference?: { id: number; name: string };
+  link: string;
+}
+
 export interface SessionCreate {
   name: string;
   description?: string;

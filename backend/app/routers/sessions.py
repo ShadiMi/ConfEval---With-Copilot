@@ -4,9 +4,13 @@ from typing import List
 from datetime import datetime, timezone
 
 from app.database import get_db
-from app.models import Session as SessionModel, User, UserRole, SessionStatus, Tag, Conference
+from app.models import (
+    Session as SessionModel, User, UserRole, SessionStatus, Tag, Conference,
+    Project, Review,
+)
 from app.schemas import (
-    SessionCreate, SessionUpdate, SessionResponse, SessionWithDetails
+    SessionCreate, SessionUpdate, SessionResponse, SessionWithDetails,
+    UpcomingActivity, UpcomingConferenceRef,
 )
 from app.auth import get_current_user, require_admin
 
@@ -138,6 +142,135 @@ async def list_available_sessions(
         SessionModel.status.in_([SessionStatus.ACTIVE.value, SessionStatus.UPCOMING.value]),
         SessionModel.start_date > datetime.utcnow()
     ).order_by(SessionModel.start_date.asc()).all()
+
+
+def _session_to_activity(s: SessionModel) -> UpcomingActivity:
+    conf = None
+    if s.conference is not None:
+        conf = UpcomingConferenceRef(id=s.conference.id, name=s.conference.name)
+    return UpcomingActivity(
+        type="session",
+        id=s.id,
+        title=s.name,
+        start_date=s.start_date,
+        end_date=s.end_date,
+        location=s.location,
+        status=s.status,
+        conference=conf,
+        link=f"/sessions/{s.id}",
+    )
+
+
+@router.get("/my-upcoming", response_model=List[UpcomingActivity])
+async def list_my_upcoming_activities(
+    limit: int = 3,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Return the next N upcoming/ongoing activities the current user is part of.
+
+    - student: sessions tied to their projects (owned or team-member).
+    - internal/external_reviewer: assigned sessions + pending reviews
+      ("review_due") for assigned projects.
+    - admin: top-N upcoming sessions system-wide.
+    """
+    if limit < 1:
+        limit = 1
+    if limit > 20:
+        limit = 20
+
+    now = datetime.utcnow()
+    role = current_user.role
+    activities: List[UpcomingActivity] = []
+
+    if role == UserRole.ADMIN.value:
+        sessions = (
+            db.query(SessionModel)
+            .options(selectinload(SessionModel.conference))
+            .filter(SessionModel.end_date >= now)
+            .order_by(SessionModel.start_date.asc())
+            .limit(limit)
+            .all()
+        )
+        activities = [_session_to_activity(s) for s in sessions]
+
+    elif role == UserRole.STUDENT.value:
+        # Sessions tied to the user's owned or team-member projects.
+        owned_session_ids = {
+            p.session_id for p in current_user.projects if p.session_id is not None
+        }
+        team_session_ids = {
+            p.session_id for p in current_user.team_projects if p.session_id is not None
+        }
+        session_ids = owned_session_ids | team_session_ids
+        if session_ids:
+            sessions = (
+                db.query(SessionModel)
+                .options(selectinload(SessionModel.conference))
+                .filter(
+                    SessionModel.id.in_(session_ids),
+                    SessionModel.end_date >= now,
+                )
+                .order_by(SessionModel.start_date.asc())
+                .limit(limit)
+                .all()
+            )
+            activities = [_session_to_activity(s) for s in sessions]
+
+    elif role in (UserRole.INTERNAL_REVIEWER.value, UserRole.EXTERNAL_REVIEWER.value):
+        # Assigned sessions (upcoming/ongoing).
+        assigned_session_ids = [s.id for s in current_user.assigned_sessions]
+        session_items: List[UpcomingActivity] = []
+        if assigned_session_ids:
+            sessions = (
+                db.query(SessionModel)
+                .options(selectinload(SessionModel.conference))
+                .filter(
+                    SessionModel.id.in_(assigned_session_ids),
+                    SessionModel.end_date >= now,
+                )
+                .order_by(SessionModel.start_date.asc())
+                .all()
+            )
+            session_items = [_session_to_activity(s) for s in sessions]
+
+        # Review-due items: assigned projects with no completed review by user.
+        completed_project_ids = {
+            r.project_id for r in db.query(Review).filter(
+                Review.reviewer_id == current_user.id,
+                Review.is_completed.is_(True),
+            ).all()
+        }
+        review_items: List[UpcomingActivity] = []
+        for project in current_user.assigned_projects:
+            if project.id in completed_project_ids:
+                continue
+            session = project.session
+            if session is None or session.end_date < now:
+                continue
+            conf = None
+            if session.conference is not None:
+                conf = UpcomingConferenceRef(
+                    id=session.conference.id, name=session.conference.name
+                )
+            review_items.append(UpcomingActivity(
+                type="review_due",
+                id=project.id,
+                title=f"Review: {project.title}",
+                start_date=session.start_date,
+                end_date=session.end_date,
+                location=session.location,
+                status=session.status,
+                conference=conf,
+                link=f"/reviews?project_id={project.id}",
+            ))
+
+        merged = session_items + review_items
+        merged.sort(key=lambda a: a.start_date)
+        activities = merged[:limit]
+
+    return activities
 
 
 @router.get("/{session_id}", response_model=SessionWithDetails)
