@@ -117,7 +117,10 @@ export const sessionsApi = {
   listPublic: () => api.get('/sessions/public'),
   
   listAvailable: () => api.get('/sessions/available'),
-  
+
+  getMyUpcoming: (limit = 3) =>
+    api.get('/sessions/my-upcoming', { params: { limit } }),
+
   get: (id: number) => api.get(`/sessions/${id}`),
   
   create: (data: {

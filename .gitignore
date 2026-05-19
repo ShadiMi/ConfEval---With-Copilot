@@ -103,3 +103,4 @@ nginx/ssl/
 bandit_report.json
 .env.example
 MASTER_PROMPT.md
+ARCHITECTURE.md

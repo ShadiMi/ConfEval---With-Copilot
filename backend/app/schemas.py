@@ -439,6 +439,25 @@ class ConferenceWithSessions(ConferenceResponse):
     model_config = ConfigDict(from_attributes=True)
 
 
+# Upcoming Activities (dashboard "Next Activities" section)
+class UpcomingConferenceRef(BaseModel):
+    id: int
+    name: str
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UpcomingActivity(BaseModel):
+    type: str  # "session" or "review_due"
+    id: int
+    title: str
+    start_date: datetime
+    end_date: datetime
+    location: Optional[str] = None
+    status: Optional[str] = None
+    conference: Optional[UpcomingConferenceRef] = None
+    link: str
+
+
 # Update forward references
 UserWithTags.model_rebuild()
 SessionWithDetails.model_rebuild()

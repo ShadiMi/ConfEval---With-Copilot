@@ -7,7 +7,7 @@ import Button from '@/components/ui/Button';
 import Badge from '@/components/ui/Badge';
 import { useAuthStore } from '@/lib/store';
 import { statsApi, sessionsApi, projectsApi, applicationsApi, reviewsApi, conferencesApi } from '@/lib/api';
-import { Session, Project, ReviewerApplication, Review, Stats, Conference } from '@/types';
+import { Session, Project, ReviewerApplication, Review, Stats, Conference, UpcomingActivity } from '@/types';
 import { formatDate, getRoleLabel } from '@/lib/utils';
 import Link from 'next/link';
 import {
@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [applications, setApplications] = useState<ReviewerApplication[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [nextActivities, setNextActivities] = useState<UpcomingActivity[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,15 +40,17 @@ export default function DashboardPage() {
     
     try {
       // Load data based on role
-      const [statsRes, sessionsRes, conferencesRes] = await Promise.all([
+      const [statsRes, sessionsRes, conferencesRes, upcomingRes] = await Promise.all([
         user.role === 'admin' ? statsApi.get() : Promise.resolve({ data: null }),
         sessionsApi.list(),
         conferencesApi.list(),
+        sessionsApi.getMyUpcoming(3),
       ]);
 
       setStats(statsRes.data);
       setSessions(sessionsRes.data.slice(0, 5));
       setConferences(conferencesRes.data.slice(0, 5));
+      setNextActivities(upcomingRes.data);
 
       if (user.role === 'student') {
         const projectsRes = await projectsApi.getMyProjects();
@@ -150,7 +153,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Next Activities moved into the right sidebar below */}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 xl:col-span-3 xl:pr-[22rem]">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* Conferences */
         <Card>
           <CardHeader
@@ -162,7 +169,8 @@ export default function DashboardPage() {
               </Link>
             }
           >
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2>
+              <Calendar className="w-5 h-5 mr-2 text-primary-600" />
               {user?.role === 'admin' ? 'Recent Conferences' : 'Available Conferences'}
             </h2>
           </CardHeader>
@@ -203,7 +211,8 @@ export default function DashboardPage() {
               </Link>
             }
           >
-            <h2 className="text-lg font-semibold text-slate-900">
+            <h2>
+              <Clock className="w-5 h-5 mr-2 text-accent-600" />
               {user?.role === 'admin' ? 'Recent Sessions' : 'Available Sessions'}
             </h2>
           </CardHeader>
@@ -245,7 +254,10 @@ export default function DashboardPage() {
                 </Link>
               }
             >
-              <h2 className="text-lg font-semibold text-slate-900">My Projects</h2>
+              <h2>
+                <FolderKanban className="w-5 h-5 mr-2 text-yellow-600" />
+                My Projects
+              </h2>
             </CardHeader>
             <CardBody className="p-0">
               {projects.length === 0 ? (
@@ -290,7 +302,10 @@ export default function DashboardPage() {
                 </Link>
               }
             >
-              <h2 className="text-lg font-semibold text-slate-900">My Applications</h2>
+              <h2>
+                <FileCheck className="w-5 h-5 mr-2 text-purple-600" />
+                My Applications
+              </h2>
             </CardHeader>
             <CardBody className="p-0">
               {applications.length === 0 ? (
@@ -334,7 +349,10 @@ export default function DashboardPage() {
                 </Link>
               }
             >
-              <h2 className="text-lg font-semibold text-slate-900">My Reviews</h2>
+              <h2>
+                <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
+                My Reviews
+              </h2>
             </CardHeader>
             <CardBody className="p-0">
               {reviews.length === 0 ? (
@@ -383,7 +401,8 @@ export default function DashboardPage() {
                 </Link>
               }
             >
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2>
+                <FileCheck className="w-5 h-5 mr-2 text-purple-600" />
                 Pending Applications
               </h2>
             </CardHeader>
@@ -432,7 +451,8 @@ export default function DashboardPage() {
                 </Link>
               }
             >
-              <h2 className="text-lg font-semibold text-slate-900">
+              <h2>
+                <FolderKanban className="w-5 h-5 mr-2 text-yellow-600" />
                 Pending Projects
               </h2>
             </CardHeader>
@@ -463,6 +483,64 @@ export default function DashboardPage() {
             </CardBody>
           </Card>
         )}
+          </div>
+        </div>
+
+        {/* Right sidebar: Next Activities */}
+        <aside className="lg:col-span-1 xl:fixed xl:right-4 xl:top-24 xl:w-80 xl:max-h-[calc(100vh-7rem)] xl:overflow-y-auto xl:z-10">
+          <div className="lg:sticky lg:top-24 xl:static rounded-xl shadow-xl ring-2 ring-primary-400 overflow-hidden bg-white">
+            <div className="px-4 py-3 bg-gradient-to-r from-primary-600 to-accent-600 text-white">
+              <h2 className="text-base font-bold tracking-tight flex items-center">
+                <Calendar className="w-4 h-4 mr-2" />
+                Next Activities
+              </h2>
+            </div>
+            <div className="p-0">
+              {nextActivities.length === 0 ? (
+                <div className="p-5 text-center text-sm text-slate-500">
+                  No upcoming activities
+                </div>
+              ) : (
+                <div>
+                  {nextActivities.map((activity, idx) => {
+                    const Icon = activity.type === 'review_due' ? FileCheck : Calendar;
+                    const rowBg = idx % 2 === 0 ? 'bg-primary-50/0' : 'bg-amber-50/70';
+                    return (
+                      <Link
+                        key={`${activity.type}-${activity.id}`}
+                        href={activity.link}
+                        className={`flex items-start justify-between px-3 py-2.5 hover:bg-primary-100/70 transition-colors gap-2 border-b border-slate-100 last:border-b-0 ${rowBg}`}
+                      >
+                        <div className="flex items-start space-x-2 min-w-0">
+                          <div className="p-1.5 bg-gradient-to-br from-primary-500 to-accent-500 rounded-md shrink-0">
+                            <Icon className="w-3.5 h-3.5 text-white" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 truncate leading-tight">{activity.title}</p>
+                            {activity.conference && (
+                              <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                                {activity.conference.name}
+                              </p>
+                            )}
+                            <p className="text-xs text-slate-600 flex items-center mt-1">
+                              <Clock className="w-3 h-3 mr-1 shrink-0" />
+                              <span className="truncate">
+                                {formatDate(activity.start_date)} - {formatDate(activity.end_date)}
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                        {activity.status && (
+                          <Badge status={activity.status}>{activity.status}</Badge>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </aside>
       </div>
     </DashboardLayout>
   );
