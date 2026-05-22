@@ -199,7 +199,7 @@ class Project(Base):
     student_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     session_id = Column(Integer, ForeignKey("sessions.id", ondelete="CASCADE"), nullable=True)
     status = Column(String(50), default=ProjectStatus.PENDING)
-    mentor_email = Column(String(255), nullable=True)
+    advisor_email = Column(String(255), nullable=True)
     paper_path = Column(String(500), nullable=True)
     slides_path = Column(String(500), nullable=True)
     additional_docs_path = Column(String(500), nullable=True)

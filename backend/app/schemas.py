@@ -133,7 +133,7 @@ class ProjectCreate(ProjectBase):
     session_id: Optional[int] = None
     tag_ids: List[int] = []
     team_member_emails: List[EmailStr] = []  # Up to 2 additional team members
-    mentor_email: Optional[EmailStr] = None
+    advisor_email: Optional[EmailStr] = None
     
     @field_validator('team_member_emails')
     @classmethod
@@ -155,7 +155,7 @@ class ProjectUpdate(BaseModel):
     description: Optional[str] = None
     session_id: Optional[int] = None
     tag_ids: Optional[List[int]] = None
-    mentor_email: Optional[EmailStr] = None
+    advisor_email: Optional[EmailStr] = None
 
 
 class ProjectStatusUpdate(BaseModel):
@@ -177,7 +177,7 @@ class ProjectResponse(ProjectBase):
     student_id: int
     session_id: Optional[int] = None
     status: ProjectStatus
-    mentor_email: Optional[str] = None
+    advisor_email: Optional[str] = None
     paper_path: Optional[str] = None
     slides_path: Optional[str] = None
     additional_docs_path: Optional[str] = None
