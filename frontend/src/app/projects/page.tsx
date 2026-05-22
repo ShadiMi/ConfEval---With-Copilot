@@ -39,7 +39,7 @@ export default function ProjectsPage() {
     description: '',
     tag_ids: [] as number[],
     team_member_emails: ['', ''] as string[],
-    mentor_email: '',
+    advisor_email: '',
   });
   const [paperFile, setPaperFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -107,7 +107,7 @@ export default function ProjectsPage() {
         description: formData.description,
         tag_ids: formData.tag_ids,
         team_member_emails: teamEmails,
-        mentor_email: formData.mentor_email.trim() || undefined,
+        advisor_email: formData.advisor_email.trim() || undefined,
       });
       
       // Upload the paper file
@@ -120,7 +120,7 @@ export default function ProjectsPage() {
         description: '',
         tag_ids: [],
         team_member_emails: ['', ''],
-        mentor_email: '',
+        advisor_email: '',
       });
       setPaperFile(null);
       loadData();
@@ -250,12 +250,12 @@ export default function ProjectsPage() {
                         </div>
                       )}
                       
-                      {/* Mentor */}
-                      {project.mentor_email && (
+                      {/* Advisor */}
+                      {project.advisor_email && (
                         <div className="flex items-center gap-2 mb-2">
                           <Mail className="w-4 h-4 text-slate-400" />
-                          <span className="text-sm text-slate-600">Mentor:</span>
-                          <span className="text-sm text-slate-700">{project.mentor_email}</span>
+                          <span className="text-sm text-slate-600">Advisor:</span>
+                          <span className="text-sm text-slate-700">{project.advisor_email}</span>
                         </div>
                       )}
                       
@@ -391,13 +391,13 @@ export default function ProjectsPage() {
             </div>
           </div>
           
-          {/* Mentor Email */}
+          {/* Advisor Email */}
           <Input
-            label="Mentor Email (Optional)"
+            label="Advisor Email (Optional)"
             type="email"
-            placeholder="Enter your mentor's email address"
-            value={formData.mentor_email}
-            onChange={(e) => setFormData({ ...formData, mentor_email: e.target.value })}
+            placeholder="Enter your advisor's email address"
+            value={formData.advisor_email}
+            onChange={(e) => setFormData({ ...formData, advisor_email: e.target.value })}
           />
           
           {/* File Upload - Required */}

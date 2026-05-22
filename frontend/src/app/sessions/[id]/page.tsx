@@ -98,7 +98,7 @@ export default function SessionDetailPage() {
   const [projectEditForm, setProjectEditForm] = useState({
     title: '',
     description: '',
-    mentor_email: '',
+    advisor_email: '',
   });
   const [projectSelectedTagIds, setProjectSelectedTagIds] = useState<number[]>([]);
   const [projectTeamMembers, setProjectTeamMembers] = useState<User[]>([]);
@@ -354,7 +354,7 @@ export default function SessionDetailPage() {
     setProjectEditForm({
       title: project.title,
       description: project.description || '',
-      mentor_email: project.mentor_email || '',
+      advisor_email: project.advisor_email || '',
     });
     setProjectSelectedTagIds(project.tags.map(t => t.id));
     try {
@@ -379,7 +379,7 @@ export default function SessionDetailPage() {
       await projectsApi.update(selectedProject.id, {
         title: projectEditForm.title,
         description: projectEditForm.description || undefined,
-        mentor_email: projectEditForm.mentor_email || undefined,
+        advisor_email: projectEditForm.advisor_email || undefined,
         tag_ids: projectSelectedTagIds,
       });
       toast.success('Project updated');
@@ -1059,11 +1059,11 @@ export default function SessionDetailPage() {
               />
               
               <Input
-                label="Mentor Email"
+                label="Advisor Email"
                 type="email"
-                value={projectEditForm.mentor_email}
-                onChange={(e) => setProjectEditForm({ ...projectEditForm, mentor_email: e.target.value })}
-                placeholder="mentor@university.edu"
+                value={projectEditForm.advisor_email}
+                onChange={(e) => setProjectEditForm({ ...projectEditForm, advisor_email: e.target.value })}
+                placeholder="advisor@university.edu"
               />
               
               {/* Tags Selection */}

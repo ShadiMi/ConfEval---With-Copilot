@@ -61,7 +61,7 @@ export default function AdminProjectsPage() {
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
-    mentor_email: '',
+    advisor_email: '',
   });
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   
@@ -139,7 +139,7 @@ export default function AdminProjectsPage() {
     setEditForm({
       title: project.title,
       description: project.description || '',
-      mentor_email: project.mentor_email || '',
+      advisor_email: project.advisor_email || '',
     });
     setSelectedTagIds(project.tags.map(t => t.id));
     // Load team members
@@ -205,7 +205,7 @@ export default function AdminProjectsPage() {
       await projectsApi.update(selectedProject.id, {
         title: editForm.title,
         description: editForm.description || undefined,
-        mentor_email: editForm.mentor_email || undefined,
+        advisor_email: editForm.advisor_email || undefined,
         tag_ids: selectedTagIds,
       });
       toast.success('Project updated');
@@ -257,7 +257,7 @@ export default function AdminProjectsPage() {
             Student / Team
           </th>
           <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
-            Mentor
+            Advisor
           </th>
           <th className="text-left px-4 py-3 text-xs font-medium text-slate-500 uppercase tracking-wider">
             Session
@@ -303,10 +303,10 @@ export default function AdminProjectsPage() {
               </div>
             </td>
             <td className="px-4 py-4">
-              {project.mentor_email ? (
-                <p className="text-sm text-slate-700">{project.mentor_email}</p>
+              {project.advisor_email ? (
+                <p className="text-sm text-slate-700">{project.advisor_email}</p>
               ) : (
-                <span className="text-xs text-slate-400">No mentor</span>
+                <span className="text-xs text-slate-400">No advisor</span>
               )}
             </td>
             <td className="px-4 py-4 whitespace-nowrap">
@@ -555,11 +555,11 @@ export default function AdminProjectsPage() {
               />
               
               <Input
-                label="Mentor Email"
+                label="Advisor Email"
                 type="email"
-                value={editForm.mentor_email}
-                onChange={(e) => setEditForm({ ...editForm, mentor_email: e.target.value })}
-                placeholder="mentor@university.edu"
+                value={editForm.advisor_email}
+                onChange={(e) => setEditForm({ ...editForm, advisor_email: e.target.value })}
+                placeholder="advisor@university.edu"
               />
               
               {/* Tags Selection */}

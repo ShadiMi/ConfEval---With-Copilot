@@ -168,7 +168,7 @@ export interface Project {
   student_id: number;
   session_id?: number;
   status: ProjectStatus;
-  mentor_email?: string;
+  advisor_email?: string;
   paper_path?: string;
   slides_path?: string;
   additional_docs_path?: string;
@@ -193,7 +193,7 @@ export interface ProjectCreate {
   session_id?: number;
   tag_ids?: number[];
   team_member_emails?: string[];
-  mentor_email?: string;
+  advisor_email?: string;
 }
 
 // Criteria types

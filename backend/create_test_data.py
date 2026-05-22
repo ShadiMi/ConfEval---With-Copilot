@@ -375,7 +375,7 @@ def create_test_data():
                 session_id=sessions[session_idx].id,
                 status=ProjectStatus.APPROVED.value if i < 24 else ProjectStatus.PENDING.value,
                 poster_number=f"P-{i+1:02d}" if i < 24 else None,
-                mentor_email=f"mentor{(i % 10) + 1}@university.edu",
+                advisor_email=f"advisor{(i % 10) + 1}@university.edu",
             )
             # Assign tags based on session
             tag_idx = session_idx % len(tags)

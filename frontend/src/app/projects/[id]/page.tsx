@@ -49,7 +49,7 @@ export default function ProjectDetailPage() {
   const [editForm, setEditForm] = useState({
     title: '',
     description: '',
-    mentor_email: '',
+    advisor_email: '',
     tag_ids: [] as number[],
   });
   const [saving, setSaving] = useState(false);
@@ -124,7 +124,7 @@ export default function ProjectDetailPage() {
       setEditForm({
         title: project.title,
         description: project.description || '',
-        mentor_email: project.mentor_email || '',
+        advisor_email: project.advisor_email || '',
         tag_ids: project.tags.map((t) => t.id),
       });
       setEditModal(true);
@@ -138,7 +138,7 @@ export default function ProjectDetailPage() {
       await projectsApi.update(projectId, {
         title: editForm.title,
         description: editForm.description,
-        mentor_email: editForm.mentor_email || undefined,
+        advisor_email: editForm.advisor_email || undefined,
         tag_ids: editForm.tag_ids,
       });
       toast.success('Project updated successfully');
@@ -539,10 +539,10 @@ export default function ProjectDetailPage() {
                   </div>
                 </div>
               )}
-              {project.mentor_email && (
+              {project.advisor_email && (
                 <div>
-                  <p className="text-sm text-slate-500">Mentor</p>
-                  <p className="font-medium text-slate-900">{project.mentor_email}</p>
+                  <p className="text-sm text-slate-500">Advisor</p>
+                  <p className="font-medium text-slate-900">{project.advisor_email}</p>
                 </div>
               )}
               <div className="flex items-center">
@@ -645,11 +645,11 @@ export default function ProjectDetailPage() {
             rows={4}
           />
           <Input
-            label="Mentor Email (Optional)"
+            label="Advisor Email (Optional)"
             type="email"
-            value={editForm.mentor_email}
-            onChange={(e) => setEditForm({ ...editForm, mentor_email: e.target.value })}
-            placeholder="Enter mentor's email address"
+            value={editForm.advisor_email}
+            onChange={(e) => setEditForm({ ...editForm, advisor_email: e.target.value })}
+            placeholder="Enter advisor's email address"
           />
           
           {allTags.length > 0 && (

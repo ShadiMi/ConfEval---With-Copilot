@@ -11,6 +11,7 @@ import {
     ClipboardList,
     FileCheck,
     FolderKanban,
+    GraduationCap,
     Home,
     Layers,
     LayoutDashboard,
@@ -86,6 +87,12 @@ const navItems: NavItem[] = [
     label: 'Reviews',
     href: '/reviews',
     icon: FileCheck,
+    roles: ['internal_reviewer', 'external_reviewer'],
+  },
+  {
+    label: 'Advising',
+    href: '/advising',
+    icon: GraduationCap,
     roles: ['internal_reviewer', 'external_reviewer'],
   },
   {

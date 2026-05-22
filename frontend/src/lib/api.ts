@@ -158,6 +158,8 @@ export const projectsApi = {
   getMyProjects: () => api.get('/projects/my'),
   
   getPendingCount: () => api.get('/projects/pending-count'),
+
+  getAdvised: () => api.get('/projects/advised'),
   
   get: (id: number) => api.get(`/projects/${id}`),
   
@@ -167,7 +169,7 @@ export const projectsApi = {
     session_id?: number;
     tag_ids?: number[];
     team_member_emails?: string[];
-    mentor_email?: string;
+    advisor_email?: string;
   }) => api.post('/projects', data),
   
   update: (id: number, data: any) => api.put(`/projects/${id}`, data),

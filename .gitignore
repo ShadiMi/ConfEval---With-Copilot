@@ -104,3 +104,5 @@ bandit_report.json
 .env.example
 MASTER_PROMPT.md
 ARCHITECTURE.md
+ARCHITECTURE_.md
+ARCHITECTURE.html

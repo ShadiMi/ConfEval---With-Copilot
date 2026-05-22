@@ -115,7 +115,7 @@ async def get_my_projects(
             "student_id": project.student_id,
             "session_id": project.session_id,
             "status": project.status,
-            "mentor_email": project.mentor_email,
+            "advisor_email": project.advisor_email,
             "paper_path": project.paper_path,
             "slides_path": project.slides_path,
             "additional_docs_path": project.additional_docs_path,
@@ -437,6 +437,37 @@ async def clear_all_assignments(
     return {"message": f"Cleared {cleared} assignments"}
 
 
+@router.get("/advised", response_model=List[ProjectWithStudent])
+async def get_advised_projects(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Get projects where the current user is listed as the advisor (by email).
+
+    Available to reviewers (internal/external) and admins.
+    """
+    if current_user.role not in [
+        UserRole.INTERNAL_REVIEWER.value,
+        UserRole.EXTERNAL_REVIEWER.value,
+        UserRole.ADMIN.value,
+    ]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only reviewers or admins can view advised projects",
+        )
+
+    if not current_user.email:
+        return []
+
+    projects = (
+        db.query(Project)
+        .filter(Project.advisor_email.ilike(current_user.email))
+        .order_by(Project.created_at.desc())
+        .all()
+    )
+    return projects
+
+
 @router.get("/{project_id}", response_model=ProjectWithStudent)
 async def get_project(
     project_id: int,
@@ -509,7 +540,7 @@ async def create_project(
         description=project_data.description,
         student_id=current_user.id,
         session_id=project_data.session_id,
-        mentor_email=project_data.mentor_email,
+        advisor_email=project_data.advisor_email,
         tags=tags,
         team_members=team_members
     )
