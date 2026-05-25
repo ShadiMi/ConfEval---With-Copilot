@@ -200,6 +200,8 @@ class Project(Base):
     session_id = Column(Integer, ForeignKey("sessions.id", ondelete="CASCADE"), nullable=True)
     status = Column(String(50), default=ProjectStatus.PENDING)
     advisor_email = Column(String(255), nullable=True)
+    supervisor1_email = Column(String(255), nullable=True)
+    supervisor2_email = Column(String(255), nullable=True)
     paper_path = Column(String(500), nullable=True)
     slides_path = Column(String(500), nullable=True)
     additional_docs_path = Column(String(500), nullable=True)

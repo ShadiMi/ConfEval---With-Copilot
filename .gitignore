@@ -106,3 +106,5 @@ MASTER_PROMPT.md
 ARCHITECTURE.md
 ARCHITECTURE_.md
 ARCHITECTURE.html
+backend/create_test_data.py
+backend/test_data_excel.py

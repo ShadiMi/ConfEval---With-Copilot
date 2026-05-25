@@ -116,6 +116,8 @@ async def get_my_projects(
             "session_id": project.session_id,
             "status": project.status,
             "advisor_email": project.advisor_email,
+            "supervisor1_email": project.supervisor1_email,
+            "supervisor2_email": project.supervisor2_email,
             "paper_path": project.paper_path,
             "slides_path": project.slides_path,
             "additional_docs_path": project.additional_docs_path,
@@ -271,17 +273,49 @@ async def get_all_projects_for_assignment(
         query = query.filter(Project.session_id == session_id)
     
     projects = query.all()
-    
+
+    # Build reviewer -> set of touched session ids across ALL approved projects
+    # (independent of the optional session_id filter on this endpoint, so the
+    # UI can always tell when a reviewer is assigned in every session).
+    from app.models import project_reviewers as project_reviewers_table
+    touched_rows = (
+        db.query(project_reviewers_table.c.user_id, Project.session_id)
+        .join(Project, Project.id == project_reviewers_table.c.project_id)
+        .filter(
+            Project.status == ProjectStatus.APPROVED.value,
+            Project.session_id.isnot(None),
+        )
+        .all()
+    )
+    reviewer_touched_sessions: dict[int, set[int]] = {}
+    for user_id, sid in touched_rows:
+        reviewer_touched_sessions.setdefault(user_id, set()).add(sid)
+
     return [
         {
             "id": p.id,
             "title": p.title,
+            "poster_number": p.poster_number,
             "session_id": p.session_id,
             "session_name": p.session.name if p.session else None,
             "student_name": p.student.full_name,
+            "student_email": p.student.email,
+            "team_members": [
+                {"id": tm.id, "full_name": tm.full_name, "email": tm.email}
+                for tm in p.team_members
+            ],
+            "advisor_email": p.advisor_email,
+            "supervisor1_email": p.supervisor1_email,
+            "supervisor2_email": p.supervisor2_email,
             "tags": [{"id": t.id, "name": t.name} for t in p.tags],
             "assigned_reviewers": [
-                {"id": r.id, "full_name": r.full_name, "email": r.email}
+                {
+                    "id": r.id,
+                    "full_name": r.full_name,
+                    "email": r.email,
+                    "tag_ids": [t.id for t in r.interested_tags],
+                    "touched_session_ids": sorted(reviewer_touched_sessions.get(r.id, set())),
+                }
                 for r in p.assigned_reviewers
             ],
             "reviews_count": len([r for r in p.reviews if r.is_completed])
@@ -292,126 +326,295 @@ async def get_all_projects_for_assignment(
 
 @router.post("/assignments/auto-assign")
 async def auto_assign_reviewers(
-    session_id: int = Query(None, description="Session ID to limit assignment to"),
-    reviewers_per_project: int = Query(2, description="Number of reviewers to assign per project"),
+    session_id: int = Query(None, description="Session ID to limit assignment to (single, kept for backwards compatibility)"),
+    session_ids: list[int] = Query(None, description="Restrict to projects in these session IDs (multi-select)"),
+    reviewer_ids: list[int] = Query(None, description="Restrict the reviewer pool to these user IDs"),
+    reviewers_per_project: int = Query(None, description="Reviewers per project (default from settings or 2)"),
+    max_per_session: int = Query(None, description="Max projects a reviewer can review per session (default from settings or 3)"),
+    max_total: int = Query(None, description="Max projects a reviewer can review across all sessions (default from settings or 9)"),
+    require_untouched_session: bool = Query(True, description="Rule 7: enforce that every reviewer keeps at least one session entirely empty"),
     preview: bool = Query(False, description="If true, return proposed assignments without applying"),
     current_user: User = Depends(require_admin),
     db: Session = Depends(get_db)
 ):
+    """Automatically assign reviewers to projects under the following rules:
+
+    1. Each project receives `reviewers_per_project` reviewers (default 2).
+    2. The first reviewer (X) must be one of the project's two supervisors
+       (`supervisor1_email`, `supervisor2_email`).
+    3. Reviewer Y cannot be the *other* supervisor.
+    4. Reviewer Y cannot be the project's advisor (`advisor_email`).
+    5. A reviewer may be assigned to at most `max_per_session` projects per session.
+    6. A reviewer may be assigned to at most `max_total` projects across all sessions.
+    7. Every reviewer must keep at least one session in the system where they have
+       no assignments (across-all-sessions interpretation).
+    8. Tag/interest overlap is used only as a tie-breaker after the hard rules.
+
+    Projects whose supervisors are missing/invalid (or whose constraints are
+    unsatisfiable) are skipped and reported as `unassignable_projects`.
     """
-    Automatically assign reviewers to projects based on tag matching.
-    Reviewers with matching tags are prioritized.
-    If preview=true, returns proposed assignments without applying them.
-    """
-    # Get all approved projects
+    from app.models import SiteSettings
+
+    # --- Resolve config: query param > site_settings > hard-coded default ----
+    def _get_setting_int(key: str, fallback: int) -> int:
+        s = db.query(SiteSettings).filter(SiteSettings.key == key).first()
+        if s and s.value:
+            try:
+                return int(s.value)
+            except (TypeError, ValueError):
+                pass
+        return fallback
+
+    if reviewers_per_project is None:
+        reviewers_per_project = _get_setting_int("auto_assign_reviewers_per_project", 2)
+    if max_per_session is None:
+        max_per_session = _get_setting_int("auto_assign_max_per_session", 3)
+    if max_total is None:
+        max_total = _get_setting_int("auto_assign_max_total", 9)
+
+    if reviewers_per_project < 1:
+        raise HTTPException(status_code=400, detail="reviewers_per_project must be >= 1")
+
+    # --- Load projects in scope --------------------------------------------
     project_query = db.query(Project).filter(Project.status == ProjectStatus.APPROVED.value)
-    if session_id:
-        project_query = project_query.filter(Project.session_id == session_id)
-    projects = project_query.all()
-    
-    # Get all approved and active reviewers
-    reviewers = db.query(User).filter(
+    # Combine the single session_id (legacy) with the multi-select session_ids.
+    scope_session_ids: set[int] = set()
+    if session_id is not None:
+        scope_session_ids.add(session_id)
+    if session_ids:
+        scope_session_ids.update(session_ids)
+    if scope_session_ids:
+        project_query = project_query.filter(Project.session_id.in_(scope_session_ids))
+    projects = project_query.order_by(Project.id.asc()).all()
+
+    # --- Load all approved active reviewers --------------------------------
+    reviewer_query = db.query(User).filter(
         User.role.in_([UserRole.INTERNAL_REVIEWER.value, UserRole.EXTERNAL_REVIEWER.value]),
         User.is_approved == True,  # noqa: E712
-        User.is_active == True  # noqa: E712
-    ).all()
-    
+        User.is_active == True,  # noqa: E712
+    )
+    if reviewer_ids:
+        reviewer_query = reviewer_query.filter(User.id.in_(reviewer_ids))
+    reviewers = reviewer_query.all()
     if not reviewers:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No approved reviewers available"
-        )
-    
-    assignments_made = 0
-    proposed_assignments = []  # For preview mode
-    
-    # Track assignments per reviewer per session during this auto-assign run
-    # to respect the 4-project limit
-    reviewer_session_counts = {}
-    for reviewer in reviewers:
-        # Count existing assignments in this session (or all if no session filter)
-        if session_id:
-            count = sum(1 for p in reviewer.assigned_projects if p.session_id == session_id)
+        raise HTTPException(status_code=400, detail="No approved reviewers available")
+
+    reviewers_by_email = {r.email.lower(): r for r in reviewers if r.email}
+
+    # --- Universe of sessions (for rule 7) ---------------------------------
+    all_session_ids = {sid for (sid,) in db.query(SessionModel.id).all()}
+    total_sessions = len(all_session_ids)
+
+    # --- Precompute current state for every reviewer -----------------------
+    per_session_count: dict[int, dict[int, int]] = {}  # reviewer_id -> {session_id -> count}
+    total_count: dict[int, int] = {}  # reviewer_id -> total assignments (across all sessions)
+    touched_sessions: dict[int, set[int]] = {}  # reviewer_id -> set of session_ids assigned to
+
+    for r in reviewers:
+        sess_counts: dict[int, int] = {}
+        touched: set[int] = set()
+        for p in r.assigned_projects:
+            sid = p.session_id or 0
+            sess_counts[sid] = sess_counts.get(sid, 0) + 1
+            if p.session_id is not None:
+                touched.add(p.session_id)
+        per_session_count[r.id] = sess_counts
+        total_count[r.id] = len(r.assigned_projects)
+        touched_sessions[r.id] = touched
+
+    def can_take(reviewer: User, project_session_id: int | None) -> bool:
+        """Check rules 5, 6, 7 for assigning this reviewer to a project in
+        `project_session_id` (may be None if the project has no session)."""
+        # Rule 6: total cap
+        if total_count[reviewer.id] >= max_total:
+            return False
+        # Rule 5: per-session cap (only meaningful when the project has a session)
+        if project_session_id is not None:
+            if per_session_count[reviewer.id].get(project_session_id, 0) >= max_per_session:
+                return False
+        # Rule 7: must keep at least one untouched session in the system (configurable)
+        if require_untouched_session and project_session_id is not None and total_sessions > 0:
+            new_touched = touched_sessions[reviewer.id] | {project_session_id}
+            # After this assignment, reviewer would have len(new_touched) touched sessions;
+            # they must have at least one fully-empty session, so touched < total_sessions.
+            if len(new_touched) >= total_sessions:
+                return False
+        return True
+
+    def commit_pick(reviewer: User, project: Project) -> None:
+        sid = project.session_id
+        if sid is not None:
+            per_session_count[reviewer.id][sid] = per_session_count[reviewer.id].get(sid, 0) + 1
+            touched_sessions[reviewer.id].add(sid)
         else:
-            count = len(reviewer.assigned_projects)
-        reviewer_session_counts[reviewer.id] = count
-    
-    # For preview mode, track simulated assignments
-    simulated_assignments = {}  # project_id -> list of reviewer_ids
-    
+            per_session_count[reviewer.id][0] = per_session_count[reviewer.id].get(0, 0) + 1
+        total_count[reviewer.id] += 1
+
+    def tag_score(reviewer: User, project_tag_ids: set[int]) -> int:
+        return len({t.id for t in reviewer.interested_tags} & project_tag_ids)
+
+    def would_exhaust_sessions(reviewer: User, project_session_id: int | None) -> int:
+        """Soft Rule 7: return 1 if assigning this reviewer to project_session_id
+        would leave them with zero untouched sessions, else 0. Used as a sort
+        tiebreaker so picks that preserve at least one empty session are preferred
+        even when the hard rule is disabled."""
+        if project_session_id is None or total_sessions == 0:
+            return 0
+        new_touched = touched_sessions[reviewer.id] | {project_session_id}
+        return 1 if len(new_touched) >= total_sessions else 0
+
+    def opens_new_session(reviewer: User, project_session_id: int | None) -> int:
+        """Return 1 if assigning this reviewer to project_session_id would add
+        a session they don't currently touch, else 0. Strong soft preference to
+        re-use a reviewer's existing sessions before spreading them into new
+        ones — this keeps as many sessions untouched as the data allows."""
+        if project_session_id is None:
+            return 0
+        return 0 if project_session_id in touched_sessions[reviewer.id] else 1
+
+    # --- Assignment loop ---------------------------------------------------
+    proposed_assignments: list[dict] = []
+    unassignable: list[dict] = []
+    assignments_made = 0
+
     for project in projects:
-        # Get project tag IDs
-        project_tag_ids = {tag.id for tag in project.tags}
-        
-        # Get currently assigned (real + simulated for preview)
-        currently_assigned = set(r.id for r in project.assigned_reviewers)
-        if preview and project.id in simulated_assignments:
-            currently_assigned.update(simulated_assignments[project.id])
-        
-        # Calculate scores for each reviewer
-        reviewer_scores = []
-        for reviewer in reviewers:
-            # Skip if already assigned
-            if reviewer.id in currently_assigned:
-                continue
-            
-            # Skip if reviewer has reached 4-project limit for this session
-            current_session_id = project.session_id
-            if current_session_id:
-                session_count = reviewer_session_counts[reviewer.id]
-                if session_count >= 4:
-                    continue
-            
-            # Calculate tag match score
-            reviewer_tag_ids = {tag.id for tag in reviewer.interested_tags}
-            matching_tags = project_tag_ids & reviewer_tag_ids
-            tag_score = len(matching_tags)
-            
-            # Penalize reviewers who already have many assignments in this session (load balancing)
-            if session_id:
-                load_penalty = reviewer_session_counts[reviewer.id] * 0.5
-            else:
-                load_penalty = len(reviewer.assigned_projects) * 0.5
-            
-            final_score = tag_score - load_penalty
-            reviewer_scores.append((reviewer, final_score, tag_score))
-        
-        # Sort by score (highest first), then by tag match count
-        reviewer_scores.sort(key=lambda x: (x[1], x[2]), reverse=True)
-        
-        # Assign top reviewers until we reach the target
-        current_count = len(currently_assigned)
-        needed = reviewers_per_project - current_count
-        
-        for reviewer, score, _ in reviewer_scores[:needed]:
-            if preview:
-                # Just record the proposed assignment
+        project_tag_ids = {t.id for t in project.tags}
+        already_assigned_ids = {r.id for r in project.assigned_reviewers}
+        already_assigned_emails = {r.email.lower() for r in project.assigned_reviewers if r.email}
+
+        # Resolve supervisors & advisor (by email -> reviewer user)
+        sup1 = reviewers_by_email.get((project.supervisor1_email or "").lower()) if project.supervisor1_email else None
+        sup2 = reviewers_by_email.get((project.supervisor2_email or "").lower()) if project.supervisor2_email else None
+        advisor_user = reviewers_by_email.get((project.advisor_email or "").lower()) if project.advisor_email else None
+        # Advisor exclusion uses email regardless of whether the advisor is a reviewer
+        advisor_email_lc = (project.advisor_email or "").lower()
+
+        supervisors = [s for s in (sup1, sup2) if s is not None]
+        if not supervisors:
+            unassignable.append({
+                "project_id": project.id,
+                "title": project.title,
+                "reason": "No valid supervisor (must be an approved reviewer matching supervisor1_email or supervisor2_email).",
+            })
+            continue
+
+        # ---- Pick X: must be a supervisor (rule 2) ------------------------
+        # If a supervisor is already assigned, use them as X.
+        x_picked: User | None = None
+        for s in supervisors:
+            if s.id in already_assigned_ids:
+                x_picked = s
+                break
+
+        if x_picked is None:
+            # Pick the supervisor with the lowest current load that can take it.
+            sup_candidates = [
+                s for s in supervisors
+                if s.id not in already_assigned_ids and can_take(s, project.session_id)
+            ]
+            sup_candidates.sort(
+                key=lambda s: (
+                    would_exhaust_sessions(s, project.session_id),
+                    opens_new_session(s, project.session_id),
+                    total_count[s.id],
+                    per_session_count[s.id].get(project.session_id or 0, 0),
+                )
+            )
+            if sup_candidates:
+                x_picked = sup_candidates[0]
+                commit_pick(x_picked, project)
                 proposed_assignments.append({
                     "project_id": project.id,
-                    "reviewer_id": reviewer.id,
-                    "reviewer_name": reviewer.full_name
+                    "reviewer_id": x_picked.id,
+                    "reviewer_name": x_picked.full_name,
+                    "role": "supervisor",
                 })
-                if project.id not in simulated_assignments:
-                    simulated_assignments[project.id] = []
-                simulated_assignments[project.id].append(reviewer.id)
+                assignments_made += 1
+                if not preview:
+                    project.assigned_reviewers.append(x_picked)
+                already_assigned_ids.add(x_picked.id)
+                if x_picked.email:
+                    already_assigned_emails.add(x_picked.email.lower())
             else:
-                project.assigned_reviewers.append(reviewer)
-            reviewer_session_counts[reviewer.id] += 1
+                unassignable.append({
+                    "project_id": project.id,
+                    "title": project.title,
+                    "reason": "No supervisor available within configured limits (rules 5/6/7).",
+                })
+                continue
+
+        # ---- Pick remaining reviewers (Y, etc.) ---------------------------
+        other_supervisor_ids = {s.id for s in supervisors if s.id != x_picked.id}
+        slots_remaining = max(0, reviewers_per_project - len(already_assigned_ids))
+
+        # Build exclusion set for Y candidates (rules 3 & 4 + already-assigned).
+        for _slot in range(slots_remaining):
+            candidates = []
+            for r in reviewers:
+                if r.id in already_assigned_ids:
+                    continue
+                if r.id in other_supervisor_ids:  # rule 3
+                    continue
+                if advisor_email_lc and r.email and r.email.lower() == advisor_email_lc:  # rule 4
+                    continue
+                if not can_take(r, project.session_id):
+                    continue
+                candidates.append(r)
+
+            if not candidates:
+                unassignable.append({
+                    "project_id": project.id,
+                    "title": project.title,
+                    "reason": f"Could not fill all {reviewers_per_project} reviewer slots given the constraints.",
+                })
+                break
+
+            # Sort:
+            #  1. soft Rule 7: never the last untouched session of this reviewer
+            #  2. re-use sessions: prefer reviewers already touching this session
+            #  3. higher tag score (rule 8)
+            #  4. lower load (fairness)
+            candidates.sort(
+                key=lambda r: (
+                    would_exhaust_sessions(r, project.session_id),
+                    opens_new_session(r, project.session_id),
+                    -tag_score(r, project_tag_ids),
+                    total_count[r.id],
+                    per_session_count[r.id].get(project.session_id or 0, 0),
+                    r.id,
+                )
+            )
+            pick = candidates[0]
+            commit_pick(pick, project)
+            proposed_assignments.append({
+                "project_id": project.id,
+                "reviewer_id": pick.id,
+                "reviewer_name": pick.full_name,
+                "role": "reviewer",
+            })
             assignments_made += 1
-    
+            if not preview:
+                project.assigned_reviewers.append(pick)
+            already_assigned_ids.add(pick.id)
+            if pick.email:
+                already_assigned_emails.add(pick.email.lower())
+
     if not preview:
         db.commit()
-    
-    if preview:
-        return {
-            "message": f"Preview: {assignments_made} assignments would be made.",
-            "assignments_count": assignments_made,
-            "proposed_assignments": proposed_assignments
-        }
-    
+
+    message_prefix = "Preview: " if preview else ""
     return {
-        "message": f"Auto-assignment completed. {assignments_made} assignments made.",
-        "assignments_made": assignments_made
+        "message": f"{message_prefix}{assignments_made} assignments {'would be' if preview else ''} made.".strip(),
+        "assignments_count": assignments_made,
+        "assignments_made": assignments_made,
+        "proposed_assignments": proposed_assignments,
+        "unassignable_projects": unassignable,
+        "config": {
+            "reviewers_per_project": reviewers_per_project,
+            "max_per_session": max_per_session,
+            "max_total": max_total,
+            "require_untouched_session": require_untouched_session,
+        },
     }
 
 
@@ -541,6 +744,8 @@ async def create_project(
         student_id=current_user.id,
         session_id=project_data.session_id,
         advisor_email=project_data.advisor_email,
+        supervisor1_email=project_data.supervisor1_email,
+        supervisor2_email=project_data.supervisor2_email,
         tags=tags,
         team_members=team_members
     )

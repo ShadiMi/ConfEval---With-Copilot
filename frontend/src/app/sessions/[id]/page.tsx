@@ -99,6 +99,8 @@ export default function SessionDetailPage() {
     title: '',
     description: '',
     advisor_email: '',
+    supervisor1_email: '',
+    supervisor2_email: '',
   });
   const [projectSelectedTagIds, setProjectSelectedTagIds] = useState<number[]>([]);
   const [projectTeamMembers, setProjectTeamMembers] = useState<User[]>([]);
@@ -355,6 +357,8 @@ export default function SessionDetailPage() {
       title: project.title,
       description: project.description || '',
       advisor_email: project.advisor_email || '',
+      supervisor1_email: project.supervisor1_email || '',
+      supervisor2_email: project.supervisor2_email || '',
     });
     setProjectSelectedTagIds(project.tags.map(t => t.id));
     try {
@@ -380,6 +384,8 @@ export default function SessionDetailPage() {
         title: projectEditForm.title,
         description: projectEditForm.description || undefined,
         advisor_email: projectEditForm.advisor_email || undefined,
+        supervisor1_email: projectEditForm.supervisor1_email || undefined,
+        supervisor2_email: projectEditForm.supervisor2_email || undefined,
         tag_ids: projectSelectedTagIds,
       });
       toast.success('Project updated');
@@ -1064,6 +1070,20 @@ export default function SessionDetailPage() {
                 value={projectEditForm.advisor_email}
                 onChange={(e) => setProjectEditForm({ ...projectEditForm, advisor_email: e.target.value })}
                 placeholder="advisor@university.edu"
+              />
+              <Input
+                label="Supervisor 1 Email"
+                type="email"
+                value={projectEditForm.supervisor1_email}
+                onChange={(e) => setProjectEditForm({ ...projectEditForm, supervisor1_email: e.target.value })}
+                placeholder="supervisor1@university.edu"
+              />
+              <Input
+                label="Supervisor 2 Email"
+                type="email"
+                value={projectEditForm.supervisor2_email}
+                onChange={(e) => setProjectEditForm({ ...projectEditForm, supervisor2_email: e.target.value })}
+                placeholder="supervisor2@university.edu"
               />
               
               {/* Tags Selection */}

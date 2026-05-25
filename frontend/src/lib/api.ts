@@ -170,6 +170,8 @@ export const projectsApi = {
     tag_ids?: number[];
     team_member_emails?: string[];
     advisor_email?: string;
+    supervisor1_email?: string;
+    supervisor2_email?: string;
   }) => api.post('/projects', data),
   
   update: (id: number, data: any) => api.put(`/projects/${id}`, data),
@@ -257,9 +259,29 @@ export const projectsApi = {
   getAllProjectsForAssignment: (sessionId?: number) =>
     api.get('/projects/assignments/projects', { params: sessionId ? { session_id: sessionId } : {} }),
   
-  autoAssignReviewers: (sessionId?: number, reviewersPerProject: number = 2, preview: boolean = false) =>
+  autoAssignReviewers: (
+    sessionId?: number,
+    reviewersPerProject: number = 2,
+    preview: boolean = false,
+    maxPerSession?: number,
+    maxTotal?: number,
+    requireUntouchedSession: boolean = true,
+    sessionIds?: number[],
+    reviewerIds?: number[],
+  ) =>
     api.post('/projects/assignments/auto-assign', null, {
-      params: { session_id: sessionId, reviewers_per_project: reviewersPerProject, preview }
+      params: {
+        session_id: sessionId,
+        session_ids: sessionIds && sessionIds.length > 0 ? sessionIds : undefined,
+        reviewer_ids: reviewerIds && reviewerIds.length > 0 ? reviewerIds : undefined,
+        reviewers_per_project: reviewersPerProject,
+        preview,
+        max_per_session: maxPerSession,
+        max_total: maxTotal,
+        require_untouched_session: requireUntouchedSession,
+      },
+      // FastAPI expects list query params as repeated keys (e.g. ?session_ids=1&session_ids=2)
+      paramsSerializer: { indexes: null },
     }),
   
   clearAllAssignments: (sessionId?: number) =>

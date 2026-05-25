@@ -134,6 +134,14 @@ else:
         skip_msg="projects.advisor_email column already exists",
     )
 
+# --- projects: supervisor1_email / supervisor2_email -------------------------
+for col_name in ("supervisor1_email", "supervisor2_email"):
+    run(
+        f"ALTER TABLE projects ADD COLUMN IF NOT EXISTS {col_name} VARCHAR(255)",
+        f"Added projects.{col_name} column",
+        skip_msg=f"projects.{col_name} column already exists",
+    )
+
 # --- conferences table -------------------------------------------------------
 run(
     """
