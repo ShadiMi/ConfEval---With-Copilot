@@ -311,8 +311,8 @@ export default function AdminAssignmentsPage() {
     // Hebrew column layout. We write the file in REVERSED column order so that
     // when Excel opens it left-to-right, the user sees the columns laid out
     // right-to-left as in the SCE evaluation sheet:
-    //   מספר פרויקט | מושב- מסך | מושב | מסך | מנחה 1 | מנחה 2 | מלווה 1 |
-    //   מלווה 2 | שם פרויקט | סטודנט 1 | סטודנט 2 | סטודנט 3 | שופט 1 | שופט 2
+    //   מספר פרויקט | מושב- מסך | מושב | מסך | מלווה 1 | מלווה 2 | מנחה 1 |
+    //   מנחה 2 | שם פרויקט | סטודנט 1 | סטודנט 2 | סטודנט 3 | שופט 1 | שופט 2
     const headers = [
       'מספר פרויקט',
       'מושב- מסך',
