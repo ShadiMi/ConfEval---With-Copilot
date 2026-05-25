@@ -62,6 +62,8 @@ export default function AdminProjectsPage() {
     title: '',
     description: '',
     advisor_email: '',
+    supervisor1_email: '',
+    supervisor2_email: '',
   });
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   
@@ -140,6 +142,8 @@ export default function AdminProjectsPage() {
       title: project.title,
       description: project.description || '',
       advisor_email: project.advisor_email || '',
+      supervisor1_email: project.supervisor1_email || '',
+      supervisor2_email: project.supervisor2_email || '',
     });
     setSelectedTagIds(project.tags.map(t => t.id));
     // Load team members
@@ -206,6 +210,8 @@ export default function AdminProjectsPage() {
         title: editForm.title,
         description: editForm.description || undefined,
         advisor_email: editForm.advisor_email || undefined,
+        supervisor1_email: editForm.supervisor1_email || undefined,
+        supervisor2_email: editForm.supervisor2_email || undefined,
         tag_ids: selectedTagIds,
       });
       toast.success('Project updated');
@@ -560,6 +566,20 @@ export default function AdminProjectsPage() {
                 value={editForm.advisor_email}
                 onChange={(e) => setEditForm({ ...editForm, advisor_email: e.target.value })}
                 placeholder="advisor@university.edu"
+              />
+              <Input
+                label="Supervisor 1 Email"
+                type="email"
+                value={editForm.supervisor1_email}
+                onChange={(e) => setEditForm({ ...editForm, supervisor1_email: e.target.value })}
+                placeholder="supervisor1@university.edu"
+              />
+              <Input
+                label="Supervisor 2 Email"
+                type="email"
+                value={editForm.supervisor2_email}
+                onChange={(e) => setEditForm({ ...editForm, supervisor2_email: e.target.value })}
+                placeholder="supervisor2@university.edu"
               />
               
               {/* Tags Selection */}

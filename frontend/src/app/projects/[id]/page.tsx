@@ -50,6 +50,8 @@ export default function ProjectDetailPage() {
     title: '',
     description: '',
     advisor_email: '',
+    supervisor1_email: '',
+    supervisor2_email: '',
     tag_ids: [] as number[],
   });
   const [saving, setSaving] = useState(false);
@@ -125,6 +127,8 @@ export default function ProjectDetailPage() {
         title: project.title,
         description: project.description || '',
         advisor_email: project.advisor_email || '',
+        supervisor1_email: project.supervisor1_email || '',
+        supervisor2_email: project.supervisor2_email || '',
         tag_ids: project.tags.map((t) => t.id),
       });
       setEditModal(true);
@@ -139,6 +143,8 @@ export default function ProjectDetailPage() {
         title: editForm.title,
         description: editForm.description,
         advisor_email: editForm.advisor_email || undefined,
+        supervisor1_email: editForm.supervisor1_email || undefined,
+        supervisor2_email: editForm.supervisor2_email || undefined,
         tag_ids: editForm.tag_ids,
       });
       toast.success('Project updated successfully');
@@ -545,6 +551,17 @@ export default function ProjectDetailPage() {
                   <p className="font-medium text-slate-900">{project.advisor_email}</p>
                 </div>
               )}
+              {(project.supervisor1_email || project.supervisor2_email) && (
+                <div>
+                  <p className="text-sm text-slate-500">Supervisors</p>
+                  {project.supervisor1_email && (
+                    <p className="font-medium text-slate-900">{project.supervisor1_email}</p>
+                  )}
+                  {project.supervisor2_email && (
+                    <p className="font-medium text-slate-900">{project.supervisor2_email}</p>
+                  )}
+                </div>
+              )}
               <div className="flex items-center">
                 <Calendar className="w-5 h-5 text-slate-400 mr-3" />
                 <div>
@@ -650,6 +667,20 @@ export default function ProjectDetailPage() {
             value={editForm.advisor_email}
             onChange={(e) => setEditForm({ ...editForm, advisor_email: e.target.value })}
             placeholder="Enter advisor's email address"
+          />
+          <Input
+            label="Supervisor 1 Email (Optional)"
+            type="email"
+            value={editForm.supervisor1_email}
+            onChange={(e) => setEditForm({ ...editForm, supervisor1_email: e.target.value })}
+            placeholder="First supervisor's email"
+          />
+          <Input
+            label="Supervisor 2 Email (Optional)"
+            type="email"
+            value={editForm.supervisor2_email}
+            onChange={(e) => setEditForm({ ...editForm, supervisor2_email: e.target.value })}
+            placeholder="Second supervisor's email"
           />
           
           {allTags.length > 0 && (

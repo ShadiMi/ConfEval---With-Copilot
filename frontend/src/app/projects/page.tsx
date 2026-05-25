@@ -40,6 +40,8 @@ export default function ProjectsPage() {
     tag_ids: [] as number[],
     team_member_emails: ['', ''] as string[],
     advisor_email: '',
+    supervisor1_email: '',
+    supervisor2_email: '',
   });
   const [paperFile, setPaperFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -108,6 +110,8 @@ export default function ProjectsPage() {
         tag_ids: formData.tag_ids,
         team_member_emails: teamEmails,
         advisor_email: formData.advisor_email.trim() || undefined,
+        supervisor1_email: formData.supervisor1_email.trim() || undefined,
+        supervisor2_email: formData.supervisor2_email.trim() || undefined,
       });
       
       // Upload the paper file
@@ -121,6 +125,8 @@ export default function ProjectsPage() {
         tag_ids: [],
         team_member_emails: ['', ''],
         advisor_email: '',
+        supervisor1_email: '',
+        supervisor2_email: '',
       });
       setPaperFile(null);
       loadData();
@@ -256,6 +262,18 @@ export default function ProjectsPage() {
                           <Mail className="w-4 h-4 text-slate-400" />
                           <span className="text-sm text-slate-600">Advisor:</span>
                           <span className="text-sm text-slate-700">{project.advisor_email}</span>
+                        </div>
+                      )}
+                      {(project.supervisor1_email || project.supervisor2_email) && (
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <Mail className="w-4 h-4 text-slate-400" />
+                          <span className="text-sm text-slate-600">Supervisors:</span>
+                          {project.supervisor1_email && (
+                            <span className="text-sm text-slate-700">{project.supervisor1_email}</span>
+                          )}
+                          {project.supervisor2_email && (
+                            <span className="text-sm text-slate-700">{project.supervisor2_email}</span>
+                          )}
                         </div>
                       )}
                       
@@ -399,6 +417,30 @@ export default function ProjectsPage() {
             value={formData.advisor_email}
             onChange={(e) => setFormData({ ...formData, advisor_email: e.target.value })}
           />
+
+          {/* Supervisors */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Supervisors (Optional)
+            </label>
+            <p className="text-xs text-slate-500 mb-2">
+              Used for auto-assignment: one supervisor will be picked as the first reviewer.
+            </p>
+            <div className="space-y-2">
+              <Input
+                type="email"
+                placeholder="Supervisor 1 email"
+                value={formData.supervisor1_email}
+                onChange={(e) => setFormData({ ...formData, supervisor1_email: e.target.value })}
+              />
+              <Input
+                type="email"
+                placeholder="Supervisor 2 email"
+                value={formData.supervisor2_email}
+                onChange={(e) => setFormData({ ...formData, supervisor2_email: e.target.value })}
+              />
+            </div>
+          </div>
           
           {/* File Upload - Required */}
           <div>

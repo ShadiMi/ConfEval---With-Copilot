@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
 Script to create test data for the ConfEval application.
-Creates: 12 students, 6 internal reviewers, 6 external reviewers,
-         3 unapproved reviewers, 3 conferences, 9 sessions, 36 projects, reviews
+Creates: 112 students, 13 internal reviewers (Excel staff),
+         3 unapproved reviewers, 1 conference, 6 sessions (A–F),
+         56 projects, reviews — all sourced from projects_clean.xlsx.
 """
 
 import sys
@@ -16,10 +17,15 @@ from app.models import (
     User, UserRole, Session, SessionStatus, Project, ProjectStatus, 
     Tag, Review, CriteriaScore, Criteria, Conference, ConferenceStatus,
 )
+from test_data_excel import STAFF, STUDENTS, PROJECTS
 
 # Test data identifier prefix - used to identify test data for deletion
 TEST_PREFIX = "test_"
 TEST_EMAIL_DOMAIN = "@confeval.com"
+
+def _email_for(local: str) -> str:
+    """Build a test email from an email_local string."""
+    return f"{TEST_PREFIX}{local}{TEST_EMAIL_DOMAIN}"
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -48,86 +54,48 @@ def create_test_data():
         db.flush()
         print(f"  Created {len(tags)} tags")
         
-        # Create 12 students
+        # Create students from the Excel sheet (unique persons across all projects).
         students = []
-        student_names = [
-            ("Alice", "Johnson"),
-            ("Bob", "Smith"),
-            ("Carol", "Williams"),
-            ("David", "Brown"),
-            ("Emma", "Davis"),
-            ("Frank", "Miller"),
-            ("Grace", "Wilson"),
-            ("Henry", "Moore"),
-            ("Ivy", "Taylor"),
-            ("Jack", "Anderson"),
-            ("Kate", "Thomas"),
-            ("Leo", "Jackson"),
-        ]
-        
-        for i, (first, last) in enumerate(student_names, 1):
-            student = User(
-                email=f"{TEST_PREFIX}student{i}{TEST_EMAIL_DOMAIN}",
-                full_name=f"{first} {last}",
+        students_by_hname = {}
+        for s in STUDENTS:
+            user = User(
+                email=_email_for(s["email_local"]),
+                # Keep the original Hebrew name as the displayed name; the English
+                # transliteration in `full_name` exists only to build `email_local`.
+                full_name=s["hebrew_name"] or s["full_name"],
                 hashed_password=hash_password("test123"),
                 role=UserRole.STUDENT.value,
                 is_approved=True,
-                affiliation=f"University {chr(64 + (i % 26) + 1)}",
+                affiliation="SCE - Shamoon College of Engineering",
             )
-            db.add(student)
-            students.append(student)
+            db.add(user)
+            students.append(user)
+            students_by_hname[s["hebrew_name"]] = user
         db.flush()
         print(f"  Created {len(students)} students")
         
-        # Create 6 internal reviewers (approved)
+        # Create internal reviewers from the Excel staff list (advisors + supervisors).
         internal_reviewers = []
-        internal_names = [
-            ("Dr. James", "Anderson"),
-            ("Dr. Sarah", "Thompson"),
-            ("Dr. Michael", "Garcia"),
-            ("Dr. Emily", "Martinez"),
-            ("Dr. Richard", "Harris"),
-            ("Dr. Amanda", "Lewis"),
-        ]
-        
-        for i, (first, last) in enumerate(internal_names, 1):
+        staff_by_local = {}
+        for s in STAFF:
             reviewer = User(
-                email=f"{TEST_PREFIX}internal{i}{TEST_EMAIL_DOMAIN}",
-                full_name=f"{first} {last}",
+                email=_email_for(s["email_local"]),
+                # Keep the original Hebrew name as the displayed name; the English
+                # transliteration in `full_name` exists only to build `email_local`.
+                full_name=s.get("hebrew_name") or s["full_name"],
                 hashed_password=hash_password("test123"),
                 role=UserRole.INTERNAL_REVIEWER.value,
                 is_approved=True,
-                affiliation="Main University",
+                affiliation="SCE - Shamoon College of Engineering",
             )
             db.add(reviewer)
             internal_reviewers.append(reviewer)
+            staff_by_local[s["email_local"]] = reviewer
         db.flush()
-        print(f"  Created {len(internal_reviewers)} internal reviewers")
-        
-        # Create 6 external reviewers (approved)
+        print(f"  Created {len(internal_reviewers)} internal reviewers (Excel staff)")
+
+        # No external reviewers in this dataset.
         external_reviewers = []
-        external_names = [
-            ("Prof. Robert", "Lee"),
-            ("Prof. Jennifer", "Clark"),
-            ("Prof. William", "Hall"),
-            ("Prof. Lisa", "Young"),
-            ("Prof. Daniel", "King"),
-            ("Prof. Michelle", "Wright"),
-        ]
-        
-        for i, (first, last) in enumerate(external_names, 1):
-            reviewer = User(
-                email=f"{TEST_PREFIX}external{i}{TEST_EMAIL_DOMAIN}",
-                full_name=f"{first} {last}",
-                hashed_password=hash_password("test123"),
-                role=UserRole.EXTERNAL_REVIEWER.value,
-                is_approved=True,
-                affiliation=f"Partner University {chr(64 + i)}",
-            )
-            db.add(reviewer)
-            external_reviewers.append(reviewer)
-        db.flush()
-        print(f"  Created {len(external_reviewers)} external reviewers")
         
         # Create 3 unapproved reviewers (pending admin approval)
         unapproved_reviewers = []
@@ -151,47 +119,19 @@ def create_test_data():
         db.flush()
         print(f"  Created {len(unapproved_reviewers)} unapproved reviewers")
         
-        # Create 3 conferences with proper building/floor/room from UI options
-        # Valid buildings: לגסי, אינשטיין, ספרא, מינקוף, קציר, שמעון
-        # ספרא/לגסי/אינשטיין/שמעון: floors 1,2; rooms 101-109 / 201-209
-        # מינקוף: floor 1 only; rooms 104,105,106
-        # קציר: floor G- only; rooms G-07,G-08,G-09 (non-numeric, stored as location string)
+        # Create 1 conference with 6 sessions (A..F) matching the Excel sheet.
         conferences = []
         conference_data = [
             {
-                "name": f"{TEST_PREFIX}Annual Research Conference 2026",
-                "description": "Annual multi-session research conference showcasing student projects across all disciplines",
-                "start_date": datetime(2026, 4, 28, 8, 0),
-                "end_date": datetime(2026, 5, 1, 20, 0),
+                "name": f"{TEST_PREFIX}SCE Final Project Conference 2026",
+                "description": "Final-project conference, 6 sessions (A–F) with up to 10 screens each.",
+                "start_date": datetime(2026, 6, 1, 8, 0),
+                "end_date": datetime(2026, 6, 6, 20, 0),
                 "building": "ספרא",
                 "floor": 1,
                 "room_number": 103,
                 "location": "ספרא, קומה 1, חדר 103",
                 "status": ConferenceStatus.ACTIVE.value,
-                "max_sessions": 10,
-            },
-            {
-                "name": f"{TEST_PREFIX}Tech Innovation Summit 2026",
-                "description": "Technology and innovation focused conference featuring cutting-edge research",
-                "start_date": datetime(2026, 5, 25, 9, 0),
-                "end_date": datetime(2026, 5, 27, 18, 0),
-                "building": "לגסי",
-                "floor": 2,
-                "room_number": 201,
-                "location": "לגסי, קומה 2, חדר 201",
-                "status": ConferenceStatus.ACTIVE.value,
-                "max_sessions": 8,
-            },
-            {
-                "name": f"{TEST_PREFIX}Graduate Research Expo 2026",
-                "description": "Graduate student research presentations and poster sessions",
-                "start_date": datetime(2026, 6, 22, 9, 0),
-                "end_date": datetime(2026, 6, 23, 17, 0),
-                "building": "אינשטיין",
-                "floor": 2,
-                "room_number": 205,
-                "location": "אינשטיין, קומה 2, חדר 205",
-                "status": ConferenceStatus.DRAFT.value,
                 "max_sessions": 6,
             },
         ]
@@ -203,181 +143,70 @@ def create_test_data():
         db.flush()
         print(f"  Created {len(conferences)} conferences")
         
-        # Create sessions for each conference (3 sessions per conference = 9 total)
-        # Session dates/times must be WITHIN their parent conference date range
-        # Session locations inherit from conference location
+        # Create 6 sessions (one per letter A..F), each holding up to 10 screens.
+        session_letters = ["A", "B", "C", "D", "E", "F"]
         sessions = []
-        all_session_data = [
-            # Conference 1: Apr 28 08:00 – May 1 20:00 @ ספרא, קומה 1, חדר 103
-            {
-                "name": f"{TEST_PREFIX}AI and Machine Learning Track",
-                "description": "Presentations on artificial intelligence and machine learning research",
-                "conference_id": None,  # set below
-                "start_date": datetime(2026, 4, 28, 9, 0),
-                "end_date": datetime(2026, 4, 28, 13, 0),
-                "location": "ספרא, קומה 1, חדר 103",
-                "status": SessionStatus.UPCOMING.value,
-                "max_projects": 15,
-            },
-            {
-                "name": f"{TEST_PREFIX}Software Engineering Track",
-                "description": "Software development methodologies and best practices",
-                "conference_id": None,
-                "start_date": datetime(2026, 4, 29, 9, 0),
-                "end_date": datetime(2026, 4, 29, 13, 0),
-                "location": "ספרא, קומה 1, חדר 103",
-                "status": SessionStatus.UPCOMING.value,
-                "max_projects": 12,
-            },
-            {
-                "name": f"{TEST_PREFIX}Data Analytics Track",
-                "description": "Big data, analytics, and visualization projects",
-                "conference_id": None,
-                "start_date": datetime(2026, 4, 30, 10, 0),
-                "end_date": datetime(2026, 4, 30, 14, 0),
-                "location": "ספרא, קומה 1, חדר 103",
-                "status": SessionStatus.UPCOMING.value,
-                "max_projects": 10,
-            },
-            # Conference 2: May 25 09:00 – May 27 18:00 @ לגסי, קומה 2, חדר 201
-            {
-                "name": f"{TEST_PREFIX}Web Technologies Workshop",
-                "description": "Modern web development frameworks and technologies",
-                "conference_id": None,
-                "start_date": datetime(2026, 5, 25, 10, 0),
-                "end_date": datetime(2026, 5, 25, 15, 0),
-                "location": "לגסי, קומה 2, חדר 201",
-                "status": SessionStatus.UPCOMING.value,
-                "max_projects": 12,
-            },
-            {
-                "name": f"{TEST_PREFIX}Mobile App Showcase",
-                "description": "iOS and Android application demonstrations",
-                "conference_id": None,
-                "start_date": datetime(2026, 5, 26, 10, 0),
-                "end_date": datetime(2026, 5, 26, 15, 0),
-                "location": "לגסי, קומה 2, חדר 201",
-                "status": SessionStatus.UPCOMING.value,
-                "max_projects": 10,
-            },
-            {
-                "name": f"{TEST_PREFIX}Cloud & DevOps Session",
-                "description": "Cloud infrastructure and DevOps practices",
-                "conference_id": None,
-                "start_date": datetime(2026, 5, 27, 9, 0),
-                "end_date": datetime(2026, 5, 27, 13, 0),
-                "location": "לגסי, קומה 2, חדר 201",
-                "status": SessionStatus.UPCOMING.value,
-                "max_projects": 8,
-            },
-            # Conference 3: Jun 22 09:00 – Jun 23 17:00 @ אינשטיין, קומה 2, חדר 205
-            {
-                "name": f"{TEST_PREFIX}Cybersecurity Research",
-                "description": "Security research and vulnerability analysis",
-                "conference_id": None,
-                "start_date": datetime(2026, 6, 22, 9, 0),
-                "end_date": datetime(2026, 6, 22, 13, 0),
-                "location": "אינשטיין, קומה 2, חדר 205",
-                "status": SessionStatus.UPCOMING.value,
-                "max_projects": 8,
-            },
-            {
-                "name": f"{TEST_PREFIX}IoT and Embedded Systems",
-                "description": "Internet of Things and embedded computing projects",
-                "conference_id": None,
-                "start_date": datetime(2026, 6, 22, 14, 0),
-                "end_date": datetime(2026, 6, 22, 17, 0),
-                "location": "אינשטיין, קומה 2, חדר 205",
-                "status": SessionStatus.UPCOMING.value,
-                "max_projects": 6,
-            },
-            {
-                "name": f"{TEST_PREFIX}Emerging Technologies",
-                "description": "Blockchain, AR/VR, and other emerging tech",
-                "conference_id": None,
-                "start_date": datetime(2026, 6, 23, 9, 0),
-                "end_date": datetime(2026, 6, 23, 13, 0),
-                "location": "אינשטיין, קומה 2, חדר 205",
-                "status": SessionStatus.UPCOMING.value,
-                "max_projects": 8,
-            },
-        ]
-        
-        # Map sessions to their parent conference (3 per conference)
-        for i, sess_data in enumerate(all_session_data):
-            conf_idx = i // 3  # 0,1,2 -> conf 0; 3,4,5 -> conf 1; 6,7,8 -> conf 2
-            sess_data["conference_id"] = conferences[conf_idx].id
-            session = Session(**sess_data)
-            # Assign different tags to different sessions
-            session.tags = [tags[i % len(tags)], tags[(i + 1) % len(tags)]]
-            db.add(session)
-            sessions.append(session)
+        sessions_by_letter = {}
+        for i, letter in enumerate(session_letters):
+            day = 1 + i  # June 1..June 6
+            sess = Session(
+                name=f"{TEST_PREFIX}Session {letter}",
+                description=f"Session {letter} - 10 screens of project presentations",
+                conference_id=conferences[0].id,
+                start_date=datetime(2026, 6, day, 9, 0),
+                end_date=datetime(2026, 6, day, 17, 0),
+                location="ספרא, קומה 1, חדר 103",
+                status=SessionStatus.UPCOMING.value,
+                max_projects=12,
+            )
+            sess.tags = [tags[i % len(tags)], tags[(i + 1) % len(tags)]]
+            db.add(sess)
+            sessions.append(sess)
+            sessions_by_letter[letter] = sess
         db.flush()
         print(f"  Created {len(sessions)} sessions")
         
-        # Create 36 projects (4 per session, distributed among students)
+        # Create projects from the Excel sheet.
         projects = []
-        project_data = [
-            # Session 0: AI and Machine Learning Track
-            ("Neural Network Image Classification System", "A deep learning system for classifying images into multiple categories using CNN architectures.", 0),
-            ("Real-time Object Detection for Autonomous Vehicles", "Implementation of YOLO-based object detection for self-driving car applications.", 0),
-            ("Sentiment Analysis Using Transformer Models", "Using BERT and GPT models for analyzing social media sentiment.", 0),
-            ("Predictive Maintenance with Machine Learning", "ML-based system to predict equipment failures before they occur.", 0),
-            # Session 1: Software Engineering Track
-            ("Microservices Architecture for E-commerce", "Scalable microservices-based backend for online shopping platform.", 1),
-            ("Continuous Integration Pipeline Design", "Automated CI/CD pipeline using GitHub Actions and Docker.", 1),
-            ("Test-Driven Development Framework", "Custom testing framework with coverage analysis.", 1),
-            ("Code Quality Analysis Tool", "Static code analyzer for detecting bugs and code smells.", 1),
-            # Session 2: Data Analytics Track
-            ("Customer Churn Prediction Model", "ML model to predict customer churn using historical data.", 2),
-            ("Real-time Dashboard for Sales Analytics", "Interactive dashboard with live data visualization.", 2),
-            ("Social Media Trend Analysis", "Data mining tool for identifying trending topics.", 2),
-            ("Healthcare Data Visualization Platform", "Visual analytics for patient health records.", 2),
-            # Session 3: Web Technologies Workshop
-            ("Responsive E-commerce Platform", "Full-stack e-commerce solution with modern UI/UX design.", 3),
-            ("Cloud-based Collaboration Tool", "Real-time collaboration platform with video conferencing.", 3),
-            ("Progressive Web App for News", "PWA with offline support and push notifications.", 3),
-            ("GraphQL API Gateway", "Unified GraphQL layer for microservices.", 3),
-            # Session 4: Mobile App Showcase
-            ("Mobile Health Tracking Application", "Cross-platform app for tracking health metrics and fitness.", 4),
-            ("Augmented Reality Shopping App", "AR-enabled mobile shopping experience.", 4),
-            ("Social Networking App for Students", "Campus-focused social network with study groups.", 4),
-            ("Mobile Payment Wallet", "Secure digital wallet with biometric authentication.", 4),
-            # Session 5: Cloud & DevOps Session
-            ("Kubernetes Cluster Management Tool", "Web-based K8s cluster monitoring and management.", 5),
-            ("Serverless Application Framework", "Framework for building serverless functions.", 5),
-            ("Infrastructure as Code Templates", "Terraform templates for common cloud patterns.", 5),
-            ("Container Security Scanner", "Automated vulnerability scanning for Docker images.", 5),
-            # Session 6: Cybersecurity Research
-            ("Network Intrusion Detection System", "ML-based system for detecting network anomalies.", 6),
-            ("Secure Password Manager", "Zero-knowledge encrypted password vault.", 6),
-            ("Phishing Detection Browser Extension", "Browser plugin to identify phishing attempts.", 6),
-            ("Blockchain-based Identity Verification", "Decentralized identity management system.", 6),
-            # Session 7: IoT and Embedded Systems
-            ("IoT Smart Home Automation", "Smart home system integrating various IoT devices.", 7),
-            ("Wearable Health Monitor", "Embedded device for continuous health monitoring.", 7),
-            ("Agricultural Sensor Network", "IoT sensors for smart farming applications.", 7),
-            ("Industrial Equipment Monitoring", "Real-time monitoring of factory equipment.", 7),
-            # Session 8: Emerging Technologies
-            ("Blockchain-based Voting System", "Secure and transparent voting using blockchain.", 8),
-            ("Virtual Reality Training Platform", "VR-based employee training simulation.", 8),
-            ("Natural Language Processing Chatbot", "Conversational AI assistant for customer support.", 8),
-            ("Quantum Computing Simulator", "Educational simulator for quantum algorithms.", 8),
-        ]
-        
-        for i, (title, description, session_idx) in enumerate(project_data):
-            student_index = i % len(students)
-            
+        skipped = []
+        for p in PROJECTS:
+            session = sessions_by_letter.get(p["session_letter"])
+            if session is None:
+                skipped.append((p["project_num"], "unknown session"))
+                continue
+            students_he = p["students_he"] or []
+            if not students_he:
+                skipped.append((p["project_num"], "no students"))
+                continue
+            owner = students_by_hname.get(students_he[0])
+            if owner is None:
+                skipped.append((p["project_num"], f"missing owner {students_he[0]}"))
+                continue
+            team_members = [
+                students_by_hname[s] for s in students_he[1:]
+                if s in students_by_hname
+            ]
+
+            advisor_email = _email_for(p["advisor_key"]) if p["advisor_key"] else None
+            sup1_email = _email_for(p["supervisor1_key"]) if p["supervisor1_key"] else None
+            sup2_email = _email_for(p["supervisor2_key"]) if p["supervisor2_key"] else None
+
+            raw_title = p["title"] or f"Project {p['project_num']}"
             project = Project(
-                title=f"{TEST_PREFIX}{title}",
-                description=description,
-                student_id=students[student_index].id,
-                session_id=sessions[session_idx].id,
-                status=ProjectStatus.APPROVED.value if i < 24 else ProjectStatus.PENDING.value,
-                poster_number=f"P-{i+1:02d}" if i < 24 else None,
-                advisor_email=f"advisor{(i % 10) + 1}@university.edu",
+                title=f"{TEST_PREFIX}{raw_title}",
+                description=p["title"] or "",
+                student_id=owner.id,
+                session_id=session.id,
+                status=ProjectStatus.APPROVED.value,
+                poster_number=p["poster_number"],
+                advisor_email=advisor_email,
+                supervisor1_email=sup1_email,
+                supervisor2_email=sup2_email,
+                team_members=team_members,
+                tags=[],
             )
             # Assign tags based on session
+            session_idx = session_letters.index(p["session_letter"])
             tag_idx = session_idx % len(tags)
             project.tags = [tags[tag_idx], tags[(tag_idx + 1) % len(tags)]]
             
@@ -385,18 +214,19 @@ def create_test_data():
             projects.append(project)
         
         db.flush()
-        print(f"  Created {len(projects)} projects")
+        print(f"  Created {len(projects)} projects from Excel"
+              + (f" (skipped {len(skipped)}: {skipped})" if skipped else ""))
         
-        # Assign reviewers to sessions (distribute evenly)
+        # Assign reviewers to sessions (distribute evenly).
+        # All staff are internal reviewers (no external reviewers in the Excel sheet).
         all_reviewers = internal_reviewers + external_reviewers
+        n_internal = len(internal_reviewers)
         for i, session in enumerate(sessions):
-            # Each session gets 4 reviewers (2 internal + 2 external, rotating)
-            start_idx = (i * 2) % len(internal_reviewers)
+            # Each session gets 4 reviewers rotating through the internal pool.
+            start_idx = (i * 2) % n_internal
             session.reviewers = [
-                internal_reviewers[start_idx],
-                internal_reviewers[(start_idx + 1) % len(internal_reviewers)],
-                external_reviewers[start_idx % len(external_reviewers)],
-                external_reviewers[(start_idx + 1) % len(external_reviewers)],
+                internal_reviewers[(start_idx + k) % n_internal]
+                for k in range(4)
             ]
         
         db.flush()
@@ -501,9 +331,9 @@ def create_test_data():
         print(f"  - {reviews_created} reviews")
         print(f"  - {len(unapproved_reviewers)} unapproved reviewers")
         print("\nTest user credentials (password: test123):")
-        print(f"  Students: {TEST_PREFIX}student1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}student{len(students)}{TEST_EMAIL_DOMAIN}")
-        print(f"  Internal reviewers: {TEST_PREFIX}internal1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}internal{len(internal_reviewers)}{TEST_EMAIL_DOMAIN}")
-        print(f"  External reviewers: {TEST_PREFIX}external1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}external{len(external_reviewers)}{TEST_EMAIL_DOMAIN}")
+        print(f"  Students: {len(students)} from Excel sheet ({TEST_PREFIX}<transliterated-name>{TEST_EMAIL_DOMAIN})")
+        print(f"  Internal reviewers (staff): {len(internal_reviewers)} from Excel sheet")
+        print(f"    e.g. {TEST_PREFIX}{STAFF[0]['email_local']}{TEST_EMAIL_DOMAIN}, {TEST_PREFIX}{STAFF[1]['email_local']}{TEST_EMAIL_DOMAIN}, ...")
         print(f"  Unapproved reviewers: {TEST_PREFIX}unapproved1{TEST_EMAIL_DOMAIN} to {TEST_PREFIX}unapproved{len(unapproved_reviewers)}{TEST_EMAIL_DOMAIN}")
         
     except Exception as e:
