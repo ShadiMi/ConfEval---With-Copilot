@@ -7,12 +7,15 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { authApi } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { Settings, Building, Save } from 'lucide-react';
+import { Building, LifeBuoy, Save } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingSupport, setSavingSupport] = useState(false);
   const [internalAffiliation, setInternalAffiliation] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
+  const [supportPhone, setSupportPhone] = useState('');
 
   useEffect(() => {
     loadSettings();
@@ -20,10 +23,15 @@ export default function AdminSettingsPage() {
 
   const loadSettings = async () => {
     try {
-      const res = await authApi.getSetting('internal_reviewer_affiliation');
-      setInternalAffiliation(res.data.value || '');
+      const [affRes, emailRes, phoneRes] = await Promise.all([
+        authApi.getSetting('internal_reviewer_affiliation'),
+        authApi.getSetting('support_email'),
+        authApi.getSetting('support_phone'),
+      ]);
+      setInternalAffiliation(affRes.data?.value || '');
+      setSupportEmail(emailRes.data?.value || '');
+      setSupportPhone(phoneRes.data?.value || '');
     } catch (error) {
-      // Setting might not exist yet
       console.error('Error loading settings:', error);
     } finally {
       setLoading(false);
@@ -33,7 +41,7 @@ export default function AdminSettingsPage() {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    
+
     try {
       await authApi.updateSetting('internal_reviewer_affiliation', internalAffiliation);
       toast.success('Settings saved successfully. Internal reviewers will be updated.');
@@ -41,6 +49,26 @@ export default function AdminSettingsPage() {
       toast.error(error.response?.data?.detail || 'Failed to save settings');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSaveSupport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (supportEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supportEmail)) {
+      toast.error('Please enter a valid support email address.');
+      return;
+    }
+    setSavingSupport(true);
+    try {
+      await Promise.all([
+        authApi.updateSetting('support_email', supportEmail),
+        authApi.updateSetting('support_phone', supportPhone),
+      ]);
+      toast.success('Support contact info saved.');
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || 'Failed to save support info');
+    } finally {
+      setSavingSupport(false);
     }
   };
 
@@ -94,6 +122,40 @@ export default function AdminSettingsPage() {
                 <Button type="submit" isLoading={saving}>
                   <Save className="w-4 h-4 mr-2" />
                   Save Settings
+                </Button>
+              </div>
+            </form>
+          </CardBody>
+        </Card>
+
+        <Card className="mt-6">
+          <CardHeader>
+            <div className="flex items-center">
+              <LifeBuoy className="w-5 h-5 text-slate-400 mr-2" />
+              <h2 className="font-semibold text-slate-900">Support Contact Info</h2>
+            </div>
+          </CardHeader>
+          <CardBody>
+            <form onSubmit={handleSaveSupport} className="space-y-4">
+              <Input
+                label="Support email"
+                type="email"
+                placeholder="support@example.org"
+                value={supportEmail}
+                onChange={(e) => setSupportEmail(e.target.value)}
+                helperText="Shown to users in the in-app tutorial and footer for technical issues."
+              />
+              <Input
+                label="Support phone"
+                placeholder="+1 555 123 4567"
+                value={supportPhone}
+                onChange={(e) => setSupportPhone(e.target.value)}
+                helperText="Optional. Shown alongside the support email."
+              />
+              <div className="flex justify-end">
+                <Button type="submit" isLoading={savingSupport}>
+                  <Save className="w-4 h-4 mr-2" />
+                  Save Support Info
                 </Button>
               </div>
             </form>

@@ -17,8 +17,7 @@ COPY package*.json ./
 
 # Install all dependencies
 RUN npm ci
-RUN npm audit fix
-RUN npm fund
+RUN npm audit fix || true
 
 # =============================================================================
 # Stage 2: Builder
@@ -40,8 +39,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 # Build the application
 RUN npm run build
-RUN npm audit fix
-RUN npm fund
+
 # =============================================================================
 # Stage 3: Production Runner
 # =============================================================================

@@ -4,6 +4,7 @@ import { authApi, notificationsApi, projectsApi } from '@/lib/api';
 import { useAuthStore } from '@/lib/store';
 import { cn, formatDate, getRoleLabel } from '@/lib/utils';
 import { Notification } from '@/types';
+import HelpMenu from './HelpMenu';
 import {
     BarChart3,
     Bell,
@@ -231,6 +232,7 @@ export default function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-tour={`nav-${item.href.replace(/^\//, '').replace(/\//g, '-')}`}
                   className={cn(
                     'inline-flex items-center px-2 py-2 text-[13px] font-medium rounded-lg transition-colors relative whitespace-nowrap',
                     pathname === item.href || pathname.startsWith(item.href + '/')
@@ -261,6 +263,7 @@ export default function Navbar() {
             {user.role === 'admin' && (
               <Link
                 href="/admin/settings"
+                data-tour="admin-settings"
                 className={cn(
                   'p-2 rounded-lg transition-colors',
                   pathname === '/admin/settings'
@@ -272,8 +275,10 @@ export default function Navbar() {
                 <Settings className="w-5 h-5" />
               </Link>
             )}
+            {/* Help menu */}
+            <HelpMenu />
             {/* Notifications */}
-            <div className="relative">
+            <div className="relative" data-tour="notifications">
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
                 className="relative p-2 rounded-lg hover:bg-slate-50 transition-colors"
@@ -326,6 +331,7 @@ export default function Navbar() {
             <div className="relative">
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
+                data-tour="user-menu"
                 className="flex items-center space-x-2 px-3 py-2 rounded-lg hover:bg-slate-50 transition-colors"
               >
                 <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
@@ -426,6 +432,7 @@ export default function Navbar() {
                 <Settings className="w-5 h-5 mr-3" />
                 Profile Settings
               </Link>
+              <HelpMenu variant="mobile" onNavigate={() => setMobileMenuOpen(false)} />
               <button
                 onClick={handleLogout}
                 className="flex items-center w-full px-3 py-2 text-base font-medium text-red-600 rounded-lg hover:bg-red-50"

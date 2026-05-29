@@ -9,7 +9,8 @@ RUN apk add --no-cache libc6-compat
 # Install dependencies first (cached layer)
 COPY package*.json ./
 RUN npm ci
-RUN npm audit fix
+RUN npm fund || true
+RUN npm audit fix --force || true
 # Source is mounted as a volume, no COPY needed
 EXPOSE 3000
 

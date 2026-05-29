@@ -58,12 +58,14 @@ export default function DashboardPage() {
       }
 
       if (user.role === 'internal_reviewer' || user.role === 'external_reviewer') {
-        const [appsRes, reviewsRes] = await Promise.all([
+        const [appsRes, reviewsRes, reviewableRes] = await Promise.all([
           applicationsApi.getMyApplications(),
           reviewsApi.getMyReviews(),
+          projectsApi.list({ status: 'approved' }),
         ]);
         setApplications(appsRes.data.slice(0, 5));
         setReviews(reviewsRes.data.slice(0, 5));
+        setProjects(reviewableRes.data);
       }
 
       if (user.role === 'admin') {
@@ -361,28 +363,32 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {reviews.map((review) => (
-                    <Link
-                      key={review.id}
-                      href={`/reviews/${review.id}`}
-                      className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
-                    >
-                      <div>
-                        <p className="font-medium text-slate-900">
-                          Review #{review.id}
-                        </p>
-                        <div className="flex items-center mt-1">
-                          <TrendingUp className="w-4 h-4 text-slate-400 mr-1" />
-                          <span className="text-sm text-slate-500">
-                            Score: {review.total_score?.toFixed(1) || 'N/A'}
-                          </span>
+                  {reviews.map((review) => {
+                    const project = projects.find((p) => p.id === review.project_id);
+                    const title = project?.title || `Project #${review.project_id}`;
+                    return (
+                      <Link
+                        key={review.id}
+                        href="/reviews"
+                        className="flex items-center justify-between p-4 hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="min-w-0 pr-3">
+                          <p className="font-medium text-slate-900 truncate">{title}</p>
+                          <div className="flex items-center mt-1">
+                            <TrendingUp className="w-4 h-4 text-slate-400 mr-1" />
+                            <span className="text-sm text-slate-500">
+                              {review.is_completed && review.total_score != null
+                                ? `Score: ${review.total_score.toFixed(1)}`
+                                : 'Not submitted yet'}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <Badge variant={review.is_completed ? 'success' : 'warning'}>
-                        {review.is_completed ? 'Completed' : 'In Progress'}
-                      </Badge>
-                    </Link>
-                  ))}
+                        <Badge variant={review.is_completed ? 'success' : 'warning'}>
+                          {review.is_completed ? 'Completed' : 'In Progress'}
+                        </Badge>
+                      </Link>
+                    );
+                  })}
                 </div>
               )}
             </CardBody>

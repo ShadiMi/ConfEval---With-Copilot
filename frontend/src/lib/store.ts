@@ -45,6 +45,34 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (isLoading) => set({ isLoading }),
 }));
 
+interface HelpState {
+  tourRunning: boolean;
+  contactOpen: boolean;
+  tourSeedKey: number; // bumped to force Joyride to remount/reset
+  startTour: () => void;
+  stopTour: () => void;
+  restartTour: (userId?: number | string) => void;
+  openContact: () => void;
+  closeContact: () => void;
+}
+
+export const useHelpStore = create<HelpState>((set) => ({
+  tourRunning: false,
+  contactOpen: false,
+  tourSeedKey: 0,
+  startTour: () =>
+    set((s) => ({ tourRunning: true, tourSeedKey: s.tourSeedKey + 1 })),
+  stopTour: () => set({ tourRunning: false }),
+  restartTour: (userId) => {
+    if (typeof window !== 'undefined' && userId !== undefined) {
+      window.localStorage.removeItem(`confeval.tour.seen.${userId}`);
+    }
+    set((s) => ({ tourRunning: true, tourSeedKey: s.tourSeedKey + 1 }));
+  },
+  openContact: () => set({ contactOpen: true }),
+  closeContact: () => set({ contactOpen: false }),
+}));
+
 // Initialize from localStorage on client side
 if (typeof window !== 'undefined') {
   const token = localStorage.getItem('token');
